@@ -4,7 +4,7 @@
 A minimal line-editor. It allows users to run grep, ls, and other commands in a pseudo-interactive mode, where a user enters a filter and commands are re-executed live.
 
 ```bash
-rl  --clear | xargs -L 1 | xargs -rI % grep --color=always -rH ".%" .
+rl -x 'grep $RL_INPUT $(pwd)' 
 ```
 
 ## Build

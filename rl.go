@@ -44,9 +44,15 @@ func oneLineChange(state LineChangeState) error {
 				return nil
 			}
 
+			os.Setenv("RL_INPUT", *state.execute)
+
 			// run the provided command in the users shell
-			toExec := fmt.Sprintf("export RL_INPUT=\"%s\"; %s", line, *state.execute)
+			//toExec := fmt.Sprintf("export RL_INPUT=\"%s\"; %s", line, *state.execute)
+			toExec := fmt.Sprintf(*state.execute)
 			cmd := exec.Command(state.shell, "-c", toExec)
+
+			// by default, go will use the current  process's environment. Add RL_INPUT to the list.
+			cmd.Env = append(state.environment, "RL_INPUT="+line)
 
 			// only output the last command to standard-output by default
 			if state.done {
@@ -74,13 +80,14 @@ func oneLineChange(state LineChangeState) error {
 }
 
 type LineChangeState struct {
-	shell      string
-	tty        *os.File
-	linebuffer *[]rune
-	show       bool
-	inputOnly  bool
-	execute    *string
-	done       bool
+	shell       string
+	tty         *os.File
+	linebuffer  *[]rune
+	show        bool
+	inputOnly   bool
+	execute     *string
+	done        bool
+	environment []string
 }
 
 // Start the interactive line-editor
@@ -113,6 +120,7 @@ func rl(show bool, inputOnly bool, execute *string) {
 		inputOnly,
 		execute,
 		false,
+		os.Environ(),
 	}
 
 	for {

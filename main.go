@@ -23,6 +23,10 @@ Options:
 	-x <command>, --execute <command>      execute a utility command on readline change; the current line will be available as the line $RL_INPUT
 	- h, --help                            show this documentation
 
+Environment variables:
+	$SHELL       when run with -x or --execute, rl starts a command in the user's default-shell.
+	$RL_INPUT    when run with -x or --execute, this variable contains the user-input text.
+
 License:
 	The MIT License
 

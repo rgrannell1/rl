@@ -40,6 +40,7 @@ func onLinebufferChange(stateChan chan LineChangeState, cmdLock *sync.Mutex) {
 	// LOCKED
 	cmdLock.Lock()
 	// first stop the existing process
+
 	if state.cmd != nil {
 		if state.cmd.Process != nil {
 			state.cmd.Process.Signal(syscall.SIGINT)

@@ -10,27 +10,18 @@ import (
 func main() {
 	usage := `rl
 Usage:
-	rl [-c|--clear] [-x <cmd>|--execute <cmd>]
+  rl [-s|--show-all]
+	rl [-s|--show-all] [-x <cmd>|--execute <cmd>] [-i|--input-only]
+	rl (-h|--help)
 
 Description:
-  rl (readline) is an interactive line editor.
-
-	It captures keypresses and backspaces (to remove characters), and terminates when
-	escape, enter, or ctrl + c is pressed. By default, it echos its line buffer for each keypress, as shown below:
-
-	> rl
-
-	h
-	he
-	hel
-	hell
-	hello
-
-	setting --clear will prompt rl to clear the terminal (/dev/tty) after each keypress.
+  rl (readline) is an interactive line-editor
 
 Options:
-	-c, --clear                          clear the terminal after each update.
-	-x <command>, --execute <command>    execute a command on readline change; the current line will be available as the line $RL_INPUT
+	-s, --show-all                         by default rl clears the terminal after each keypress and before utility execution; provide -s to suppress this and keep all output present
+	-i, --input-only                       redundant if not running in --execute mode. by default, rl will return its last utility-command execution to standard-output. When --input-only is enabled, the entered text is returned instead of the last command's output. This is useful when the utility being executed is a preview command
+	-x <command>, --execute <command>      execute a utility command on readline change; the current line will be available as the line $RL_INPUT
+	- h, --help                            show this documentation
 
 License:
 	The MIT License
@@ -44,10 +35,10 @@ License:
 	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 `
 	opts, _ := docopt.ParseDoc(usage)
-	clear, clearErr := opts.Bool("--clear")
+	show, showErr := opts.Bool("--show-all")
 
-	if clearErr != nil {
-		fmt.Printf("RL: failed to read clear option. %v\n", clearErr)
+	if showErr != nil {
+		fmt.Printf("RL: failed to read show option. %v\n", showErr)
 		os.Exit(1)
 	}
 
@@ -57,5 +48,15 @@ License:
 		execute = ""
 	}
 
-	rl(clear, &execute)
+	input, inputErr := opts.Bool("--input-only")
+
+	if inputErr != nil {
+		fmt.Printf("RL: failed to read --input-only option. %v\n", showErr)
+		os.Exit(1)
+	} else if execErr != nil {
+		fmt.Printf("RL: do not provide --input-only option without specifying a command using -x or --execute. %v\n", showErr)
+		os.Exit(1)
+	}
+
+	rl(show, input, &execute)
 }

@@ -24,7 +24,7 @@ func openTTY() (*os.File, error) {
 func oneLineChange(state LineChangeState) error {
 	// print non-empty buffers
 	if len(*state.linebuffer) > 0 {
-		if state.clear {
+		if !state.show {
 			// we don't really care enough about clear errors to spam the console; ignore the errors,
 			// and attempt to clear the TTY. This program should always be run in interactive mode.
 
@@ -32,27 +32,34 @@ func oneLineChange(state LineChangeState) error {
 		}
 
 		line := string(*state.linebuffer)
+
 		if len(*state.execute) > 0 {
-			// get shell; hopefully the export syntax is right!
+			// execute a command
 
-			// run the provided command in shell
-			toExec := fmt.Sprintf("export RL_INPUT=\"%s\"; %s", line, *state.execute)
-			shellCmd := exec.Command(state.shell, "-c", toExec)
+			if state.done && state.inputOnly {
+				// we're done, we only want the input line but not the command
+				os.Stdout.WriteString(line)
+				os.Stdout.WriteString("\n")
 
-			// might want to output to /dev/tty, and only emit the final selection to stdout
-
-			if state.done {
-				shellCmd.Stdout = os.Stdout
-			} else {
-				shellCmd.Stdout = state.tty
+				return nil
 			}
 
-			shellCmd.Stderr = os.Stderr
+			// run the provided command in the users shell
+			toExec := fmt.Sprintf("export RL_INPUT=\"%s\"; %s", line, *state.execute)
+			cmd := exec.Command(state.shell, "-c", toExec)
 
-			// handle errors
-			shellCmd.Run()
+			// only output the last command to standard-output by default
+			if state.done {
+				cmd.Stdout = os.Stdout
+			} else {
+				cmd.Stdout = state.tty
+			}
+
+			cmd.Stderr = os.Stderr
+
+			cmd.Run() // TODO handle errors
 		} else {
-			// TODO maybe we want to echo each?
+			// no executable
 			if state.done {
 				os.Stdout.WriteString(line)
 				os.Stdout.WriteString("\n")
@@ -70,13 +77,14 @@ type LineChangeState struct {
 	shell      string
 	tty        *os.File
 	linebuffer *[]rune
-	clear      bool
+	show       bool
+	inputOnly  bool
 	execute    *string
 	done       bool
 }
 
 // Start the interactive line-editor
-func rl(clear bool, execute *string) {
+func rl(show bool, inputOnly bool, execute *string) {
 	if err := keyboard.Open(); err != nil {
 		fmt.Printf("RL: failed to read from keyboard. %v\n", err)
 		os.Exit(1)
@@ -101,7 +109,8 @@ func rl(clear bool, execute *string) {
 		os.Getenv("SHELL"),
 		tty,
 		&linebuffer,
-		clear,
+		show,
+		inputOnly,
 		execute,
 		false,
 	}

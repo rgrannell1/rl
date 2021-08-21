@@ -12,7 +12,7 @@ import (
 )
 
 // Open /dev/tty
-func openTTY() (*os.File, error) {
+func OpenTTY() (*os.File, error) {
 	fd, err := syscall.Open("/dev/tty", syscall.O_WRONLY, 00200)
 
 	if err != nil {
@@ -32,10 +32,10 @@ type LineChangeState struct {
 	done        bool
 	environment []string
 	cmd         *exec.Cmd
-	running     bool
 }
 
-func stopProcess(state *LineChangeState) {
+// Stop a running execute process
+func StopProcess(state *LineChangeState) {
 	if state.cmd != nil {
 		if state.cmd.Process != nil {
 			state.cmd.Process.Signal(syscall.SIGINT)
@@ -44,11 +44,12 @@ func stopProcess(state *LineChangeState) {
 	}
 }
 
-func onLinebufferChange(stateChan chan LineChangeState, cmdLock *sync.Mutex) {
+// Run each time a user inputs a character
+func OnUserInputChange(stateChan chan LineChangeState, cmdLock *sync.Mutex) {
 	state := <-stateChan
 
 	cmdLock.Lock()
-	stopProcess(&state)
+	StopProcess(&state)
 
 	if !state.show {
 		state.tty.Write([]byte("\033[H\033[2J"))
@@ -113,7 +114,7 @@ func rl(show bool, inputOnly bool, execute *string) {
 
 	linebuffer := []rune{}
 
-	tty, ttyErr := openTTY()
+	tty, ttyErr := OpenTTY()
 
 	if ttyErr != nil {
 		fmt.Printf("RL: failed to open /dev/tty. %v\n", ttyErr)
@@ -133,7 +134,6 @@ func rl(show bool, inputOnly bool, execute *string) {
 		false,
 		os.Environ(),
 		nil,
-		false,
 	}
 
 	stateChan := make(chan LineChangeState)
@@ -175,7 +175,7 @@ func rl(show bool, inputOnly bool, execute *string) {
 		cmdLock := &sync.Mutex{}
 
 		// handle command execution!! Factor this out when I can
-		go onLinebufferChange(stateChan, cmdLock)
+		go OnUserInputChange(stateChan, cmdLock)
 
 		stateChan <- state
 		state = <-stateChan

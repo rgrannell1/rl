@@ -35,76 +35,70 @@ type LineChangeState struct {
 	running     bool
 }
 
-func onLinebufferChange(stateChan chan LineChangeState, cmdLock *sync.Mutex) {
-	state := <-stateChan
-
-	// LOCKED
-	cmdLock.Lock()
-	// first stop the existing process
-
+func stopProcess(state *LineChangeState) {
 	if state.cmd != nil {
 		if state.cmd.Process != nil {
 			state.cmd.Process.Signal(syscall.SIGINT)
 			state.cmd = nil
 		}
 	}
+}
+
+func onLinebufferChange(stateChan chan LineChangeState, cmdLock *sync.Mutex) {
+	state := <-stateChan
+
+	cmdLock.Lock()
+	stopProcess(&state)
 
 	if !state.show {
-		// we don't really care enough about clear errors to spam the console; ignore the errors,
-		// and attempt to clear the TTY. This program should always be run in interactive mode.
-
 		state.tty.Write([]byte("\033[H\033[2J"))
 	}
 
 	line := string(*state.linebuffer)
 
 	if len(*state.execute) == 0 {
-		// no executable
+		// no command to execute
 		if state.done {
-			os.Stdout.WriteString(line)
-			os.Stdout.WriteString("\n")
+			os.Stdout.WriteString(line + "\n")
 		} else {
-			state.tty.WriteString(line)
-			state.tty.WriteString("\n")
+			state.tty.WriteString(line + "\n")
 		}
-	} else {
-		if state.done && state.inputOnly {
-			// we're done, we only want the input line but not the command output
-			os.Stdout.WriteString(line)
-			os.Stdout.WriteString("\n")
-
-			stateChan <- state
-			return
-		}
-
-		// run the provided command in the users shell
-		//toExec := fmt.Sprintf("export RL_INPUT=\"%s*\"; %s", line, *state.execute)
-		toExec := fmt.Sprintf(*state.execute)
-		state.cmd = exec.Command(state.shell, "-c", toExec)
-
-		// by default, go will use the current  process's environment. Add RL_INPUT to the list.
-		state.cmd.Env = append(state.environment, "RL_INPUT="+line)
-
-		// only output the last command to standard-output by default
-		if state.done {
-			state.cmd.Stdout = os.Stdout
-		} else {
-			state.cmd.Stdout = state.tty
-		}
-
-		state.cmd.Stderr = os.Stderr
-
-		// this will not block
-		state.cmd.Start()
+		return
+	} else if state.done && state.inputOnly {
+		// we're done, we only want the input line but not the command output
+		os.Stdout.WriteString(line + "\n")
 
 		stateChan <- state
-
-		cmdLock.Unlock()
+		return
 	}
+
+	// run the provided command in the users shell
+	cmd := exec.Command(state.shell, "-c", *state.execute)
+
+	// by default, go will use the current  process's environment. Add RL_INPUT to the list.
+	cmd.Env = append(state.environment, "RL_INPUT="+line)
+	cmd.Stderr = os.Stderr
+
+	// only output the last command to standard-output by default; otherwise just show it on the tty
+	if state.done {
+		cmd.Stdout = os.Stdout
+	} else {
+		cmd.Stdout = state.tty
+	}
+
+	state.cmd = cmd
+
+	// non-blocking command-start;
+	state.cmd.Start()
+
+	stateChan <- state
+
+	cmdLock.Unlock()
 }
 
 // Start the interactive line-editor
 func rl(show bool, inputOnly bool, execute *string) {
+
 	if err := keyboard.Open(); err != nil {
 		if strings.Contains(err.Error(), "/dev/tty") {
 			fmt.Printf("RL: could not open /dev/tty. Are you running rl non-interactively?")

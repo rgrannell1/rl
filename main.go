@@ -60,7 +60,7 @@ License:
 	if inputErr != nil {
 		fmt.Printf("RL: failed to read --input-only option. %v\n", showErr)
 		os.Exit(1)
-	} else if execErr != nil {
+	} else if input && execErr != nil {
 		fmt.Printf("RL: do not provide --input-only option without specifying a command using -x or --execute. %v\n", showErr)
 		os.Exit(1)
 	}

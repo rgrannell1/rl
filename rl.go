@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -105,7 +106,11 @@ func onLinebufferChange(stateChan chan LineChangeState, cmdLock *sync.Mutex) {
 // Start the interactive line-editor
 func rl(show bool, inputOnly bool, execute *string) {
 	if err := keyboard.Open(); err != nil {
-		fmt.Printf("RL: failed to read from keyboard. %v\n", err)
+		if strings.Contains(err.Error(), "/dev/tty") {
+			fmt.Printf("RL: could not open /dev/tty. Are you running rl non-interactively?")
+		} else {
+			fmt.Printf("RL: failed to read from keyboard. %v\n", err)
+		}
 		os.Exit(1)
 	}
 	defer func() {

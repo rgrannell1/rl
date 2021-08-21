@@ -10,7 +10,7 @@ import (
 func main() {
 	usage := `rl
 Usage:
-  rl [-s|--show-all]
+	rl [-s|--show-all]
 	rl [-s|--show-all] [-x <cmd>|--execute <cmd>] [-i|--input-only]
 	rl (-h|--help)
 
@@ -20,12 +20,15 @@ Description:
 Options:
 	-s, --show-all                         by default rl clears the terminal after each keypress and before utility execution; provide -s to suppress this and keep all output present
 	-i, --input-only                       redundant if not running in --execute mode. by default, rl will return its last utility-command execution to standard-output. When --input-only is enabled, the entered text is returned instead of the last command's output. This is useful when the utility being executed is a preview command
-	-x <command>, --execute <command>      execute a utility command on readline change; the current line will be available as the line $RL_INPUT
+	-x <command>, --execute <command>      execute a utility command whenever user input changes; the current line will be available as the line $RL_INPUT
 	- h, --help                            show this documentation
 
-Environment variables:
+Environment Variables:
 	$SHELL       when run with -x or --execute, rl starts a command in the user's default-shell.
-	$RL_INPUT    when run with -x or --execute, this variable contains the user-input text.
+	$RL_INPUT    when run with -x or --execute, this variable contains the user-input text. Subcommands must use this environmental variable to access user-input.
+
+See Also:
+  fzf, selecta, dmenu, percol
 
 License:
 	The MIT License

@@ -63,10 +63,10 @@ func (state LineChangeState) HandleUserUpdate(ctx *LineChangeCtx) (LineChangeSta
 		ctx.tty.Write([]byte(CLEAR_STRING))
 	}
 
-	line := state.lineBuffer.String()
-
 	if !isExecuteMode {
 		// no command to execute
+		line := state.lineBuffer.String()
+
 		if state.lineBuffer.done {
 			os.Stdout.WriteString(line + "\n")
 		} else {
@@ -75,7 +75,7 @@ func (state LineChangeState) HandleUserUpdate(ctx *LineChangeCtx) (LineChangeSta
 		return state, nil
 	} else if state.lineBuffer.done && ctx.inputOnly {
 		// we're done, we only want the input line but not the command output
-		os.Stdout.WriteString(line + "\n")
+		os.Stdout.WriteString(state.lineBuffer.String() + "\n")
 
 		return state, nil
 	}
@@ -93,6 +93,9 @@ func (state LineChangeState) HandleUserUpdate(ctx *LineChangeCtx) (LineChangeSta
 	return state, nil
 }
 
+// Given the user-input, and contextual information, start a provided command in the user's shell
+// and point it at /dev/tty if in preview mode, or standard-output if the linebuffer is done. This command
+// will have access to an environmental variable containing the user's input
 func StartCommand(lineBuffer *LineBuffer, ctx *LineChangeCtx) (*exec.Cmd, error) {
 	// run the provided command in the user's shell. We don't know for certain -c is the correct
 	// flag, this wil vary between shells. but it works for zsh and bash.

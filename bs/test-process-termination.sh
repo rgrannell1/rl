@@ -2,4 +2,4 @@
 
 go build
 
-./rl -six 'sleep 5 && spd-say -w "hello"'
+./rl -ix 'echo eep && sleep 5 && spd-say -w "hello"'

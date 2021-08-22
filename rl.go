@@ -60,8 +60,8 @@ func (state *LineChangeState) StopProcess() error {
 	return syscall.Kill(-pgid, syscall.SIGKILL)
 }
 
-// an ANSI escape string to clear a screen
-const CLEAR_STRING = "\033[H\033[2J"
+// an ANSI escape string to clear a screen (https://unix.stackexchange.com/questions/124762/how-does-clear-command-work)
+const CLEAR_STRING = "\x1b\x5b\x48\x1b\x5b\x32\x4a"
 
 // This command executes each time the user enters input, and may run attempt to run concurrently. It uses a
 // mutex to avoid concurrency issues; and performs a few steps:
@@ -219,7 +219,7 @@ func RL(show bool, inputOnly bool, execute *string) int {
 		state.lineBuffer = &lineBuffer
 		state.done = done
 
-		state, _ := OnUserInputChange(state, &ctx)
+		state, _ = OnUserInputChange(state, &ctx)
 
 		if state.done {
 			break

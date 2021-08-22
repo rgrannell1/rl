@@ -214,6 +214,13 @@ func RL(show bool, inputOnly bool, execute *string) int {
 		// repeatedly get keys, until a terminating character like Escape or Enter is reached.
 		char, key, err := keyboard.GetKey()
 
+		// this library seems to mask keyboard signals, we need to
+		// handle them ourselves. Using C style `raise` does not appear to be a good idea
+		// https://github.com/golang/go/issues/19326
+		if key == keyboard.KeyCtrlC || key == keyboard.KeyCtrlZ {
+			return 0
+		}
+
 		if err != nil {
 			fmt.Printf("RL: Keyboard read failed. %v\n", err)
 			return 1

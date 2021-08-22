@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"sync"
 	"syscall"
 
 	"github.com/eiannone/keyboard"
@@ -68,14 +67,7 @@ const CLEAR_STRING = "\033[H\033[2J"
 // This command executes each time the user enters input, and may run attempt to run concurrently. It uses a
 // mutex to avoid concurrency issues; and performs a few steps:
 // - Stop all running child-processes
-func OnUserInputChange(stateChan chan LineChangeState, cmdLock *sync.Mutex, ctx *LineChangeCtx) {
-	state := <-stateChan
-
-	cmdLock.Lock()
-	defer func() {
-		cmdLock.Unlock()
-	}()
-
+func OnUserInputChange(state LineChangeState, ctx *LineChangeCtx) LineChangeState {
 	isExecuteMode := len(*ctx.execute) > 0
 
 	if isExecuteMode {
@@ -95,13 +87,12 @@ func OnUserInputChange(stateChan chan LineChangeState, cmdLock *sync.Mutex, ctx 
 		} else {
 			ctx.tty.WriteString(line + "\n")
 		}
-		return
+		return state
 	} else if state.done && ctx.inputOnly {
 		// we're done, we only want the input line but not the command output
 		os.Stdout.WriteString(line + "\n")
 
-		stateChan <- state
-		return
+		return state
 	}
 
 	// we are in execution mode
@@ -128,7 +119,7 @@ func OnUserInputChange(stateChan chan LineChangeState, cmdLock *sync.Mutex, ctx 
 	// start the command, but don't wait for the command to complete or error-check that it started
 	state.cmd.Start()
 
-	stateChan <- state
+	return state
 }
 
 // Given a character and a keypress code, return an updated user-input text-buffer and a boolean
@@ -189,18 +180,6 @@ func RL(show bool, inputOnly bool, execute *string) int {
 		return 1
 	}
 
-	stateChan := make(chan LineChangeState)
-	defer func() {
-		close(stateChan)
-	}()
-
-	doneChan := make(chan bool)
-	defer func() {
-		close(doneChan)
-	}()
-
-	cmdLock := &sync.Mutex{}
-
 	lineBuffer := []rune{}
 	state := LineChangeState{
 		&lineBuffer,
@@ -231,11 +210,7 @@ func RL(show bool, inputOnly bool, execute *string) int {
 		state.lineBuffer = &lineBuffer
 		state.done = done
 
-		go OnUserInputChange(stateChan, cmdLock, &ctx)
-		stateChan <- state
-
-		// a command may have been launched and attached to state, so this needs to be a bidirectional channel
-		state = <-stateChan
+		state := OnUserInputChange(state, &ctx)
 
 		if state.done {
 			break

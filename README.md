@@ -7,6 +7,7 @@ A minimal line-editor. It allows users to run grep, ls, and other commands in a 
 rl -x 'grep $RL_INPUT $(pwd)'
 ```
 
+
 ## Build
 
 ```bash

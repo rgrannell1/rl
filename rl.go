@@ -22,23 +22,6 @@ func OpenTTY() (*os.File, error) {
 	return os.NewFile(uintptr(fd), "pipe"), nil
 }
 
-// Store variables that will changes as characters are received from the user
-// and commands are executed.
-type LineChangeState struct {
-	lineBuffer *[]rune   // a pointer to an array of characters the user has entered into this application, excluding some special characters like backspaces.
-	done       bool      // has a terminating character been received by the application?
-	cmd        *exec.Cmd // a pointer to the command currently being executed, if rl is running in execute mode
-}
-
-type LineChangeCtx struct {
-	shell       string   // the user's shell-variable
-	tty         *os.File // a pointer to /dev/tty
-	show        bool     // is the show option enabled? i.e should we avoid clearing the screen pre-command execution?
-	inputOnly   bool     // should we only return the user's input (e.g lineBuffer) instead of the final command execution, if we're running in execute mode?
-	execute     *string  // a string to execute in a user's shell
-	environment []string // an array of this processes environmental variables
-}
-
 // Stop a running execute process by looking up the state's cmd variable,
 // and if it's present send a SIGKILL signal to the child-process (the user's spawned shell) and
 // the processes started by it. This is important to stop slow-running commands from making this tool
@@ -56,34 +39,36 @@ func (state *LineChangeState) StopProcess() error {
 		return err
 	}
 
-	// this seems like overkill (hah) but fzf sends this signal
+	// this seems like overkill (hah) but fzf sends this signal rather than the SIGTERM I initially went with,
+	// and I trust their decision
 	return syscall.Kill(-pgid, syscall.SIGKILL)
 }
 
 // an ANSI escape string to clear a screen (https://unix.stackexchange.com/questions/124762/how-does-clear-command-work)
 const CLEAR_STRING = "\x1b\x5b\x48\x1b\x5b\x32\x4a"
 
-// This command executes each time the user enters input, and may run attempt to run concurrently. It uses a
-// mutex to avoid concurrency issues; and performs a few steps:
-// - Stop all running child-processes
-func OnUserInputChange(state LineChangeState, ctx *LineChangeCtx) (LineChangeState, error) {
+// Takes the current application state, and some context variables, and run a few steps:
+// - clear the terminal, if required
+// - cleanup any old processes running
+// - print the command-output, or input-text, to /dev/tty or standard output
+func (state LineChangeState) HandleUserUpdate(ctx *LineChangeCtx) (LineChangeState, error) {
 	isExecuteMode := len(*ctx.execute) > 0
 
 	if !ctx.show {
 		ctx.tty.Write([]byte(CLEAR_STRING))
 	}
 
-	line := string(*state.lineBuffer)
+	line := state.lineBuffer.String()
 
 	if !isExecuteMode {
 		// no command to execute
-		if state.done {
+		if state.lineBuffer.done {
 			os.Stdout.WriteString(line + "\n")
 		} else {
 			ctx.tty.WriteString(line + "\n")
 		}
 		return state, nil
-	} else if state.done && ctx.inputOnly {
+	} else if state.lineBuffer.done && ctx.inputOnly {
 		// we're done, we only want the input line but not the command output
 		os.Stdout.WriteString(line + "\n")
 
@@ -92,7 +77,7 @@ func OnUserInputChange(state LineChangeState, ctx *LineChangeCtx) (LineChangeSta
 
 	state.StopProcess()
 
-	cmd, startErr := StartCommand(state.done, line, ctx)
+	cmd, startErr := StartCommand(state.lineBuffer.done, line, ctx)
 
 	if startErr != nil {
 		return state, startErr
@@ -138,20 +123,17 @@ func StartCommand(done bool, line string, ctx *LineChangeCtx) (*exec.Cmd, error)
 
 // Given a character and a keypress code, return an updated user-input text-buffer and a boolean
 // indicating whether a terminating character like Enter or Escape was received.
-func UpdateLineBuffer(char rune, key keyboard.Key, lineBuffer []rune) ([]rune, bool) {
+func (lineBuffer LineBuffer) UpdateLine(char rune, key keyboard.Key) LineBuffer {
 	if key == keyboard.KeyBackspace || key == keyboard.KeyBackspace2 {
-		if len(lineBuffer) == 0 {
-			return []rune{}, false
-		} else {
-			return lineBuffer[:len(lineBuffer)-1], false
-		}
+		return lineBuffer.Backspace()
 	} else if key == keyboard.KeyEsc || key == keyboard.KeyEnter {
-		return lineBuffer, true
+		lineBuffer.done = true
+		return lineBuffer
 	} else if key == keyboard.KeySpace {
-		return append(lineBuffer, ' '), false
+		return lineBuffer.AddChar(' ')
 	}
 
-	return append(lineBuffer, char), false
+	return lineBuffer.AddChar(char)
 }
 
 // Start the interactive line-editor with any provided CLI arguments
@@ -194,14 +176,9 @@ func RL(show bool, inputOnly bool, execute *string) int {
 		return 1
 	}
 
-	lineBuffer := []rune{}
-	state := LineChangeState{
-		&lineBuffer,
-		false,
-		nil,
-	}
+	lineBuffer := LineBuffer{}
+	state := LineChangeState{&lineBuffer, nil}
 
-	var done bool
 	for {
 		// repeatedly read input from a keyboard, until some command
 		// repeatedly get keys, until a terminating character like Escape or Enter is reached.
@@ -219,14 +196,12 @@ func RL(show bool, inputOnly bool, execute *string) int {
 			return 1
 		}
 
-		lineBuffer, done = UpdateLineBuffer(char, key, lineBuffer)
-
+		lineBuffer = lineBuffer.UpdateLine(char, key)
 		state.lineBuffer = &lineBuffer
-		state.done = done
 
-		state, _ = OnUserInputChange(state, &ctx)
+		state, _ = state.HandleUserUpdate(&ctx)
 
-		if state.done {
+		if state.lineBuffer.done {
 			break
 		}
 	}

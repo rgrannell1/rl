@@ -74,6 +74,8 @@ func (state LineChangeState) HandleUserUpdate(ctx *LineChangeCtx) (LineChangeSta
 		}
 		return state, nil
 	} else if state.lineBuffer.done && ctx.inputOnly {
+		state.StopProcess()
+
 		// we're done, we only want the input line but not the command output
 		os.Stdout.WriteString(state.lineBuffer.String() + "\n")
 

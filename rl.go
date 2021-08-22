@@ -40,25 +40,24 @@ type LineChangeCtx struct {
 }
 
 // Stop a running execute process by looking up the state's cmd variable,
-// and if it's present send a SIGTERM signal to the child-process (the user's spawned shell) and
+// and if it's present send a SIGKILL signal to the child-process (the user's spawned shell) and
 // the processes started by it. This is important to stop slow-running commands from making this tool
 // feel laggy; we're running a process for the new user-input as fast as possible
-func StopProcess(state *LineChangeState) error {
+func (state *LineChangeState) StopProcess() error {
 	cmd := state.cmd
 
-	if cmd != nil {
-		if cmd.Process != nil {
-			pgid, err := syscall.Getpgid(cmd.Process.Pid)
-
-			if err != nil {
-				return err
-			}
-
-			return syscall.Kill(-pgid, syscall.SIGTERM)
-		}
+	if cmd == nil {
+		return nil
 	}
 
-	return nil
+	pgid, err := syscall.Getpgid(cmd.Process.Pid)
+
+	if err != nil {
+		return err
+	}
+
+	// this seems like overkill (hah) but fzf sends this signal
+	return syscall.Kill(-pgid, syscall.SIGKILL)
 }
 
 // an ANSI escape string to clear a screen
@@ -67,12 +66,8 @@ const CLEAR_STRING = "\033[H\033[2J"
 // This command executes each time the user enters input, and may run attempt to run concurrently. It uses a
 // mutex to avoid concurrency issues; and performs a few steps:
 // - Stop all running child-processes
-func OnUserInputChange(state LineChangeState, ctx *LineChangeCtx) LineChangeState {
+func OnUserInputChange(state LineChangeState, ctx *LineChangeCtx) (LineChangeState, error) {
 	isExecuteMode := len(*ctx.execute) > 0
-
-	if isExecuteMode {
-		StopProcess(&state)
-	}
 
 	if !ctx.show {
 		ctx.tty.Write([]byte(CLEAR_STRING))
@@ -87,16 +82,28 @@ func OnUserInputChange(state LineChangeState, ctx *LineChangeCtx) LineChangeStat
 		} else {
 			ctx.tty.WriteString(line + "\n")
 		}
-		return state
+		return state, nil
 	} else if state.done && ctx.inputOnly {
 		// we're done, we only want the input line but not the command output
 		os.Stdout.WriteString(line + "\n")
 
-		return state
+		return state, nil
 	}
 
-	// we are in execution mode
+	state.StopProcess()
 
+	cmd, startErr := StartCommand(state.done, line, ctx)
+
+	if startErr != nil {
+		return state, startErr
+	} else {
+		state.cmd = cmd
+	}
+
+	return state, nil
+}
+
+func StartCommand(done bool, line string, ctx *LineChangeCtx) (*exec.Cmd, error) {
 	// run the provided command in the user's shell. We don't know for certain -c is the correct
 	// flag, this wil vary between shells. but it works for zsh and bash.
 	cmd := exec.Command(ctx.shell, "-c", *ctx.execute)
@@ -106,20 +113,22 @@ func OnUserInputChange(state LineChangeState, ctx *LineChangeCtx) LineChangeStat
 	cmd.Stderr = os.Stderr
 
 	// only output the result of the last command-execution to standard-output; otherwise just show it on the tty
-	if state.done {
+	if done {
 		cmd.Stdout = os.Stdout
 	} else {
 		cmd.Stdout = ctx.tty
 	}
-
 	// set the pgid so we can terminate this child-process and its descendents with one signal later, if we need to
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	state.cmd = cmd
 
 	// start the command, but don't wait for the command to complete or error-check that it started
-	state.cmd.Start()
+	err := cmd.Start()
 
-	return state
+	if err != nil {
+		return nil, err
+	} else {
+		return cmd, nil
+	}
 }
 
 // Given a character and a keypress code, return an updated user-input text-buffer and a boolean
@@ -210,7 +219,7 @@ func RL(show bool, inputOnly bool, execute *string) int {
 		state.lineBuffer = &lineBuffer
 		state.done = done
 
-		state := OnUserInputChange(state, &ctx)
+		state, _ := OnUserInputChange(state, &ctx)
 
 		if state.done {
 			break

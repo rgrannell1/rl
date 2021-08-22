@@ -15,6 +15,12 @@ rl -x 'grep -rl $RL_INPUT ~/Notes' | xargs -I % code %
 bs build                      # live-build using entr
 bs install                    # install to /usr/bin
 ```
+## Installation
+
+```bash
+git clone https://github.com/rgrannell1/rl.git ~/.rl
+~/.rl/bs/install.sh
+```
 
 ## License
 

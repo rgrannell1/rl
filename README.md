@@ -3,7 +3,7 @@
 
 rl (readline) is an interactive line-editor. It allows users to run commands like grep interactively.
 
-This will let you interactively search for files with a keyword in your notes folder, then open your final matches in VSCode.
+For example, `rl` can interactively search files for a keyword in your notes folder, then open your final matches in VSCode.
 
 ```bash
 rl -x 'grep -rl $RL_INPUT ~/Notes' | xargs -I % code %

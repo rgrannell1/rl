@@ -26,6 +26,7 @@ type LineChangeState struct {
 	lineBuffer *[]rune
 	done       bool
 	cmd        *exec.Cmd
+	pid        int
 }
 
 type LineChangeCtx struct {
@@ -39,10 +40,13 @@ type LineChangeCtx struct {
 
 // Stop a running execute process
 func StopProcess(state *LineChangeState) {
-	if state.cmd != nil {
-		if state.cmd.Process != nil {
-			state.cmd.Process.Signal(syscall.SIGINT)
-			state.cmd = nil
+	cmd := state.cmd
+
+	if cmd != nil {
+		pgid, err := syscall.Getpgid(cmd.Process.Pid)
+
+		if err == nil {
+			syscall.Kill(-pgid, syscall.SIGTERM)
 		}
 	}
 }
@@ -96,6 +100,7 @@ func OnUserInputChange(stateChan chan LineChangeState, cmdLock *sync.Mutex, ctx 
 		cmd.Stdout = ctx.tty
 	}
 
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	state.cmd = cmd
 
 	// non-blocking command-start
@@ -105,7 +110,7 @@ func OnUserInputChange(stateChan chan LineChangeState, cmdLock *sync.Mutex, ctx 
 }
 
 // Start the interactive line-editor
-func rl(show bool, inputOnly bool, execute *string) {
+func RL(show bool, inputOnly bool, execute *string) {
 
 	if err := keyboard.Open(); err != nil {
 		if strings.Contains(err.Error(), "/dev/tty") {
@@ -155,6 +160,7 @@ func rl(show bool, inputOnly bool, execute *string) {
 		&lineBuffer,
 		false,
 		nil,
+		-1,
 	}
 
 	var done bool

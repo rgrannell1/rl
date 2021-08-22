@@ -65,5 +65,6 @@ License:
 		os.Exit(1)
 	}
 
-	RL(show, input, &execute)
+	code := RL(show, input, &execute)
+	os.Exit(code)
 }

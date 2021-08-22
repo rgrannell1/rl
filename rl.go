@@ -10,10 +10,18 @@ import (
 	"github.com/eiannone/keyboard"
 )
 
+const ENVAR_NAME_RL_INPUT = "RL_INPUT"
+
+// Allow user writes, no other permissions
+const USER_WRITE_OCTAL = 00200
+
+// an ANSI escape string to clear a screen (https://unix.stackexchange.com/questions/124762/how-does-clear-command-work)
+const CLEAR_STRING = "\x1b\x5b\x48\x1b\x5b\x32\x4a"
+
 // Open /dev/tty with user write-only permissions. If it fails to open, return
 // an error that will indicate this tool is being run in non-interactive mode
 func OpenTTY() (*os.File, error) {
-	fd, err := syscall.Open("/dev/tty", syscall.O_WRONLY, 00200)
+	fd, err := syscall.Open("/dev/tty", syscall.O_WRONLY, USER_WRITE_OCTAL)
 
 	if err != nil {
 		return nil, err
@@ -43,9 +51,6 @@ func (state *LineChangeState) StopProcess() error {
 	// and I trust their decision
 	return syscall.Kill(-pgid, syscall.SIGKILL)
 }
-
-// an ANSI escape string to clear a screen (https://unix.stackexchange.com/questions/124762/how-does-clear-command-work)
-const CLEAR_STRING = "\x1b\x5b\x48\x1b\x5b\x32\x4a"
 
 // Takes the current application state, and some context variables, and run a few steps:
 // - clear the terminal, if required
@@ -77,7 +82,7 @@ func (state LineChangeState) HandleUserUpdate(ctx *LineChangeCtx) (LineChangeSta
 
 	state.StopProcess()
 
-	cmd, startErr := StartCommand(state.lineBuffer.done, line, ctx)
+	cmd, startErr := StartCommand(state.lineBuffer, ctx)
 
 	if startErr != nil {
 		return state, startErr
@@ -88,17 +93,17 @@ func (state LineChangeState) HandleUserUpdate(ctx *LineChangeCtx) (LineChangeSta
 	return state, nil
 }
 
-func StartCommand(done bool, line string, ctx *LineChangeCtx) (*exec.Cmd, error) {
+func StartCommand(lineBuffer *LineBuffer, ctx *LineChangeCtx) (*exec.Cmd, error) {
 	// run the provided command in the user's shell. We don't know for certain -c is the correct
 	// flag, this wil vary between shells. but it works for zsh and bash.
 	cmd := exec.Command(ctx.shell, "-c", *ctx.execute)
 
 	// by default, go will use the current  process's environment. Merge RL_INPUT into that list and provide it to the command
-	cmd.Env = append(ctx.environment, "RL_INPUT="+line)
+	cmd.Env = append(ctx.environment, ENVAR_NAME_RL_INPUT+"="+lineBuffer.String())
 	cmd.Stderr = os.Stderr
 
 	// only output the result of the last command-execution to standard-output; otherwise just show it on the tty
-	if done {
+	if lineBuffer.done {
 		cmd.Stdout = os.Stdout
 	} else {
 		cmd.Stdout = ctx.tty

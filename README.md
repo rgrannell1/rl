@@ -1,18 +1,19 @@
 
 # rl
 
-A minimal line-editor. It allows users to run grep, ls, and other commands in a pseudo-interactive mode, where a user enters a filter and commands are re-executed live.
+rl (readline) is an interactive line-editor. It allows users to run commands like grep interactively.
+
+This will let you interactively search for files with a keyword in your notes folder, then open your final matches in VSCode.
 
 ```bash
-rl -x 'grep $RL_INPUT $(pwd)'
+rl -x 'grep -rl $RL_INPUT ~/Notes' | xargs -I % code %
 ```
-
 
 ## Build
 
 ```bash
-bs build       # live-build using entr
-bs install     # install to /usr/bin
+bs build                      # live-build using entr
+bs install                    # install to /usr/bin
 ```
 
 ## License

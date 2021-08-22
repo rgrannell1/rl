@@ -48,13 +48,15 @@ func StopProcess(state *LineChangeState) error {
 	cmd := state.cmd
 
 	if cmd != nil {
-		pgid, err := syscall.Getpgid(cmd.Process.Pid)
+		if cmd.Process != nil {
+			pgid, err := syscall.Getpgid(cmd.Process.Pid)
 
-		if err != nil {
-			return err
+			if err != nil {
+				return err
+			}
+
+			return syscall.Kill(-pgid, syscall.SIGTERM)
 		}
-
-		return syscall.Kill(-pgid, syscall.SIGTERM)
 	}
 
 	return nil

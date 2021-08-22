@@ -124,6 +124,11 @@ func StartCommand(done bool, line string, ctx *LineChangeCtx) (*exec.Cmd, error)
 	// start the command, but don't wait for the command to complete or error-check that it started
 	err := cmd.Start()
 
+	go func(cmd *exec.Cmd) {
+		// wait performs cleanup tasks; without this a large number of threads pile-up in this process.
+		cmd.Wait()
+	}(cmd)
+
 	if err != nil {
 		return nil, err
 	} else {

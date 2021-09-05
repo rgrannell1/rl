@@ -16,9 +16,6 @@ const ENVAR_NAME_RL_INPUT = "RL_INPUT"
 // Allow user writes, no other permissions
 const USER_WRITE_OCTAL = 00200
 
-// an ANSI escape string to clear a screen (https://unix.stackexchange.com/questions/124762/how-does-clear-command-work)
-const CLEAR_STRING = "\x1b\x5b\x48\x1b\x5b\x32\x4a"
-
 // Open /dev/tty with user write-only permissions. If it fails to open, return
 // an error that will indicate this tool is being run in non-interactive mode
 func OpenTTY() (*os.File, error) {
@@ -97,14 +94,15 @@ func StartCommand(lineBuffer *LineBuffer, ctx *LineChangeCtx) (*exec.Cmd, error)
 
 	// by default, go will use the current  process's environment. Merge RL_INPUT into that list and provide it to the command
 	cmd.Env = append(ctx.environment, ENVAR_NAME_RL_INPUT+"="+lineBuffer.content)
-	cmd.Stderr = os.Stderr
 
 	// only output the result of the last command-execution to standard-output; otherwise just show it on the tty
 	if lineBuffer.done {
 		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
 	} else {
 		nastyGlobalState = true
 		cmd.Stdout = ctx
+		cmd.Stderr = ctx // this could be refined
 	}
 	// set the pgid so we can terminate this child-process and its descendents with one signal later, if we need to
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}

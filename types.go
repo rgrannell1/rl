@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"os/exec"
 
 	"github.com/rivo/tview"
@@ -25,8 +24,6 @@ type LineChangeState struct {
 // Contextual contantish information like the user's shell, environmental variables, and command-line options
 type LineChangeCtx struct {
 	shell       string          // the user's shell-variable
-	tty         *os.File        // a pointer to /dev/tty
-	show        bool            // is the show option enabled? i.e should we avoid clearing the screen pre-command execution?
 	inputOnly   bool            // should we only return the user's input (e.g lineBuffer) instead of the final command execution, if we're running in execute mode?
 	execute     *string         // a string to execute in a user's shell
 	environment []string        // an array of this processes environmental variables

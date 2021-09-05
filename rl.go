@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 	"syscall"
 
-	"github.com/eiannone/keyboard"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -72,6 +70,22 @@ func (state LineChangeState) HandleUserUpdate(ctx *LineChangeCtx) (LineChangeSta
 	return state, nil
 }
 
+var nastyGlobalState = true
+
+// Implement IO.Writer for Ctx so we can clear _just before_ the new command text is received,
+// so we don't see flashes and latency
+func (ctx *LineChangeCtx) Write(data []byte) (n int, err error) {
+	// this will panic if a lock isn't set!
+	if nastyGlobalState {
+		ctx.tgt.Lock()
+		ctx.tgt.Clear()
+		nastyGlobalState = false
+		ctx.tgt.Unlock()
+	}
+
+	return ctx.tgt.Write(data)
+}
+
 // Given the user-input, and contextual information, start a provided command in the user's shell
 // and point it at /dev/tty if in preview mode, or standard-output if the linebuffer is done. This command
 // will have access to an environmental variable containing the user's input
@@ -88,8 +102,8 @@ func StartCommand(lineBuffer *LineBuffer, ctx *LineChangeCtx) (*exec.Cmd, error)
 	if lineBuffer.done {
 		cmd.Stdout = os.Stdout
 	} else {
-		ctx.tgt.Clear()
-		cmd.Stdout = tview.ANSIWriter(ctx.tgt)
+		nastyGlobalState = true
+		cmd.Stdout = ctx
 	}
 	// set the pgid so we can terminate this child-process and its descendents with one signal later, if we need to
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
@@ -112,34 +126,17 @@ func StartCommand(lineBuffer *LineBuffer, ctx *LineChangeCtx) (*exec.Cmd, error)
 const PROMPT = "> "
 
 // Start the interactive line-editor with any provided CLI arguments
-func RL(show bool, inputOnly bool, execute *string) int {
-	if err := keyboard.Open(); err != nil {
-		if strings.Contains(err.Error(), "/dev/tty") {
-			fmt.Printf("RL: could not open /dev/tty. Are you running rl non-interactively?")
-		} else {
-			fmt.Printf("RL: failed to read from keyboard. %v\n", err)
-		}
-		// I hate this pattern but it honours deferred functions
-		return 1
-	}
-	defer func() {
-		keyboard.Close()
-	}()
-
+func RL(inputOnly bool, execute *string) int {
 	tty, ttyErr := OpenTTY()
 
 	if ttyErr != nil {
 		fmt.Printf("RL: could not open /dev/tty. Are you running rl non-interactively?")
 		return 1
 	}
-	defer func() {
-		tty.Close()
-	}()
+	tty.Close()
 
 	ctx := LineChangeCtx{
 		os.Getenv("SHELL"),
-		tty,
-		show,
 		inputOnly,
 		execute,
 		os.Environ(),
@@ -162,7 +159,7 @@ func RL(show bool, inputOnly bool, execute *string) int {
 	tview.Styles.ContrastBackgroundColor = tcell.ColorDefault
 
 	header := tview.NewTextView().
-		SetText("RL: Interactive Line-Editor").SetTextColor(tcell.ColorDefault)
+		SetText("RL").SetTextColor(tcell.ColorDefault)
 
 	main := tview.NewTextView().
 		SetText("").
@@ -199,7 +196,8 @@ func RL(show bool, inputOnly bool, execute *string) int {
 	})
 
 	if err := app.SetRoot(grid, true).SetFocus(grid).Run(); err != nil {
-		panic(err)
+		fmt.Printf("RL: Application crashed! %v", err)
+		return 1
 	}
 
 	return 0

@@ -10,15 +10,13 @@ import (
 func main() {
 	usage := `rl
 Usage:
-	rl [-s|--show-all]
-	rl [-s|--show-all] [-x <cmd>|--execute <cmd>] [-i|--input-only]
+	rl [-x <cmd>|--execute <cmd>] [-i|--input-only]
 	rl (-h|--help)
 
 Description:
   rl (readline) is an interactive line-editor
 
 Options:
-	-s, --show-all                         by default rl clears the terminal after each keypress and before utility execution; provide -s to suppress this and keep all output present
 	-i, --input-only                       redundant if not running in --execute mode. by default, rl will return its last utility-command execution to standard-output. When --input-only is enabled, the entered text is returned instead of the last command's output. This is useful when the utility being executed is a preview command
 	-x <command>, --execute <command>      execute a utility command whenever user input changes; the current line will be available as the line $RL_INPUT
 	- h, --help                            show this documentation
@@ -42,12 +40,6 @@ License:
 	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 `
 	opts, _ := docopt.ParseDoc(usage)
-	show, showErr := opts.Bool("--show-all")
-
-	if showErr != nil {
-		fmt.Printf("RL: failed to read show option. %v\n", showErr)
-		os.Exit(1)
-	}
 
 	execute, execErr := opts.String("--execute")
 
@@ -58,12 +50,9 @@ License:
 	input, inputErr := opts.Bool("--input-only")
 
 	if inputErr != nil {
-		fmt.Printf("RL: failed to read --input-only option. %v\n", showErr)
-		os.Exit(1)
-	} else if input && execErr != nil {
-		fmt.Printf("RL: do not provide --input-only option without specifying a command using -x or --execute. %v\n", showErr)
+		fmt.Printf("RL: failed to read --input-only option. %v\n", inputErr)
 		os.Exit(1)
 	}
 
-	os.Exit(RL(show, input, &execute))
+	os.Exit(RL(input, &execute))
 }

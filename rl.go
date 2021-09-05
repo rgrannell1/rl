@@ -88,8 +88,8 @@ func StartCommand(lineBuffer *LineBuffer, ctx *LineChangeCtx) (*exec.Cmd, error)
 	if lineBuffer.done {
 		cmd.Stdout = os.Stdout
 	} else {
+		ctx.tgt.Clear()
 		cmd.Stdout = tview.ANSIWriter(ctx.tgt)
-		cmd.Stdout.Write([]byte(CLEAR_STRING))
 	}
 	// set the pgid so we can terminate this child-process and its descendents with one signal later, if we need to
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
@@ -165,18 +165,19 @@ func RL(show bool, inputOnly bool, execute *string) int {
 		SetText("RL: Interactive Line-Editor").SetTextColor(tcell.ColorDefault)
 
 	main := tview.NewTextView().
-		SetText("").SetTextColor(tcell.ColorDefault)
+		SetText("").
+		SetTextColor(tcell.ColorDefault).
+		SetChangedFunc(func() {
+			app.Draw()
+		})
 
 	ctx.tgt = main
 
 	rlInput := tview.NewInputField()
 	rlInput.
-		SetAcceptanceFunc(func(text string, char rune) bool {
-
+		SetChangedFunc(func(text string) {
 			state.lineBuffer.content = text
 			state, _ = state.HandleUserUpdate(&ctx)
-
-			return true
 		}).
 		SetLabel(PROMPT).
 		SetDoneFunc(func(key tcell.Key) {

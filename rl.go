@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"syscall"
 
 	"github.com/gdamore/tcell/v2"
@@ -123,6 +124,12 @@ func StartCommand(lineBuffer *LineBuffer, ctx *LineChangeCtx) (*exec.Cmd, error)
 	}
 }
 
+func updateHeader(header *tview.TextView, command string, buffer *LineBuffer) {
+	summary := strings.ReplaceAll(command, "$"+ENVAR_NAME_RL_INPUT, "[red]"+buffer.content+"[default]")
+
+	header.SetText("rl: " + summary)
+}
+
 const PROMPT = "> "
 
 // Start the interactive line-editor with any provided CLI arguments
@@ -159,7 +166,8 @@ func RL(inputOnly bool, execute *string) int {
 	tview.Styles.ContrastBackgroundColor = tcell.ColorDefault
 
 	header := tview.NewTextView().
-		SetText("RL").SetTextColor(tcell.ColorDefault)
+		SetText("rl: " + *execute).SetTextColor(tcell.ColorDefault).
+		SetDynamicColors(true)
 
 	main := tview.NewTextView().
 		SetText("").
@@ -175,12 +183,14 @@ func RL(inputOnly bool, execute *string) int {
 		SetChangedFunc(func(text string) {
 			state.lineBuffer.content = text
 			state, _ = state.HandleUserUpdate(&ctx)
+
+			updateHeader(header, *execute, state.lineBuffer)
 		}).
 		SetLabel(PROMPT).
 		SetDoneFunc(func(key tcell.Key) {
 			state.lineBuffer.done = true
-			app.Stop()
 
+			app.Stop() // exits on arrow
 			state, _ = state.HandleUserUpdate(&ctx)
 		})
 

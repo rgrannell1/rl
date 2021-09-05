@@ -8,6 +8,8 @@ import (
 	"syscall"
 
 	"github.com/eiannone/keyboard"
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
 )
 
 const ENVAR_NAME_RL_INPUT = "RL_INPUT"
@@ -55,33 +57,8 @@ func (state *LineChangeState) StopProcess() error {
 // Takes the current application state, and some context variables, and run a few steps:
 // - clear the terminal, if required
 // - cleanup any old processes running
-// - print the command-output, or input-text, to /dev/tty or standard output
+// - print the command-output to tview or standard output
 func (state LineChangeState) HandleUserUpdate(ctx *LineChangeCtx) (LineChangeState, error) {
-	isExecuteMode := len(*ctx.execute) > 0
-
-	if !ctx.show {
-		ctx.tty.Write([]byte(CLEAR_STRING))
-	}
-
-	if !isExecuteMode {
-		// no command to execute
-		line := state.lineBuffer.String()
-
-		if state.lineBuffer.done {
-			os.Stdout.WriteString(line + "\n")
-		} else {
-			ctx.tty.WriteString(line + "\n")
-		}
-		return state, nil
-	} else if state.lineBuffer.done && ctx.inputOnly {
-		state.StopProcess()
-
-		// we're done, we only want the input line but not the command output
-		os.Stdout.WriteString(state.lineBuffer.String() + "\n")
-
-		return state, nil
-	}
-
 	state.StopProcess()
 
 	cmd, startErr := StartCommand(state.lineBuffer, ctx)
@@ -104,14 +81,15 @@ func StartCommand(lineBuffer *LineBuffer, ctx *LineChangeCtx) (*exec.Cmd, error)
 	cmd := exec.Command(ctx.shell, "-c", *ctx.execute)
 
 	// by default, go will use the current  process's environment. Merge RL_INPUT into that list and provide it to the command
-	cmd.Env = append(ctx.environment, ENVAR_NAME_RL_INPUT+"="+lineBuffer.String())
+	cmd.Env = append(ctx.environment, ENVAR_NAME_RL_INPUT+"="+lineBuffer.content)
 	cmd.Stderr = os.Stderr
 
 	// only output the result of the last command-execution to standard-output; otherwise just show it on the tty
 	if lineBuffer.done {
 		cmd.Stdout = os.Stdout
 	} else {
-		cmd.Stdout = ctx.tty
+		cmd.Stdout = tview.ANSIWriter(ctx.tgt)
+		cmd.Stdout.Write([]byte(CLEAR_STRING))
 	}
 	// set the pgid so we can terminate this child-process and its descendents with one signal later, if we need to
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
@@ -131,24 +109,10 @@ func StartCommand(lineBuffer *LineBuffer, ctx *LineChangeCtx) (*exec.Cmd, error)
 	}
 }
 
-// Given a character and a keypress code, return an updated user-input text-buffer and a boolean
-// indicating whether a terminating character like Enter or Escape was received.
-func (lineBuffer LineBuffer) UpdateLine(char rune, key keyboard.Key) LineBuffer {
-	if key == keyboard.KeyBackspace || key == keyboard.KeyBackspace2 {
-		return lineBuffer.Backspace()
-	} else if key == keyboard.KeyEsc || key == keyboard.KeyEnter {
-		lineBuffer.done = true
-		return lineBuffer
-	} else if key == keyboard.KeySpace {
-		return lineBuffer.AddChar(' ')
-	}
-
-	return lineBuffer.AddChar(char)
-}
+const PROMPT = "> "
 
 // Start the interactive line-editor with any provided CLI arguments
 func RL(show bool, inputOnly bool, execute *string) int {
-
 	if err := keyboard.Open(); err != nil {
 		if strings.Contains(err.Error(), "/dev/tty") {
 			fmt.Printf("RL: could not open /dev/tty. Are you running rl non-interactively?")
@@ -179,6 +143,7 @@ func RL(show bool, inputOnly bool, execute *string) int {
 		inputOnly,
 		execute,
 		os.Environ(),
+		nil,
 	}
 
 	if ctx.shell == "" {
@@ -186,34 +151,54 @@ func RL(show bool, inputOnly bool, execute *string) int {
 		return 1
 	}
 
-	lineBuffer := LineBuffer{}
-	state := LineChangeState{&lineBuffer, nil}
+	linebuffer := LineBuffer{}
+	state := LineChangeState{
+		lineBuffer: &linebuffer,
+		cmd:        nil,
+	}
 
-	for {
-		// repeatedly read input from a keyboard, until some command
-		// repeatedly get keys, until a terminating character like Escape or Enter is reached.
-		char, key, err := keyboard.GetKey()
+	app := tview.NewApplication()
+	tview.Styles.PrimitiveBackgroundColor = tcell.ColorDefault
+	tview.Styles.ContrastBackgroundColor = tcell.ColorDefault
 
-		// this library seems to mask keyboard signals, we need to
-		// handle them ourselves. Using C style `raise` does not appear to be a good idea
-		// https://github.com/golang/go/issues/19326
-		if key == keyboard.KeyCtrlC || key == keyboard.KeyCtrlZ {
-			return 0
-		}
+	header := tview.NewTextView().
+		SetText("RL: Interactive Line-Editor").SetTextColor(tcell.ColorDefault)
 
-		if err != nil {
-			fmt.Printf("RL: Keyboard read failed. %v\n", err)
-			return 1
-		}
+	main := tview.NewTextView().
+		SetText("").SetTextColor(tcell.ColorDefault)
 
-		lineBuffer = lineBuffer.UpdateLine(char, key)
-		state.lineBuffer = &lineBuffer
+	ctx.tgt = main
 
-		state, _ = state.HandleUserUpdate(&ctx)
+	rlInput := tview.NewInputField()
+	rlInput.
+		SetAcceptanceFunc(func(text string, char rune) bool {
 
-		if state.lineBuffer.done {
-			break
-		}
+			state.lineBuffer.content = text
+			state, _ = state.HandleUserUpdate(&ctx)
+
+			return true
+		}).
+		SetLabel(PROMPT).
+		SetDoneFunc(func(key tcell.Key) {
+			state.lineBuffer.done = true
+			app.Stop()
+
+			state, _ = state.HandleUserUpdate(&ctx)
+		})
+
+	grid := tview.NewGrid().
+		SetRows(2, 0, 1).
+		SetColumns(30, 0, 30).SetBorders(false).
+		AddItem(header, 0, 0, 1, 3, 0, 0, false).
+		AddItem(main, 1, 0, 1, 3, 0, 0, false).
+		AddItem(rlInput, 2, 0, 1, 3, 1, 0, true)
+
+	app.SetInputCapture(func(e *tcell.EventKey) *tcell.EventKey {
+		return e
+	})
+
+	if err := app.SetRoot(grid, true).SetFocus(grid).Run(); err != nil {
+		panic(err)
 	}
 
 	return 0

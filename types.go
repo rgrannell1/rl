@@ -9,10 +9,8 @@ import (
 
 //  Stores user-input text, and whether a terminal character has been reached.
 type LineBuffer struct {
-	// The user-entered characters
-	content string
-	// Has a terminal character been reached?
-	done bool
+	content string // The user-entered character?
+	done    bool   // Has a terminal character been reached?
 }
 
 // Store variables that will changes as characters are received from the user
@@ -40,7 +38,7 @@ type ConfigOpts struct {
 
 // RL Configuration file-data
 type RLConfigFile struct {
-	SaveHistory bool `yaml:"save_history"`
+	SaveHistory bool `yaml:"save_history"` // A configuration option. Should a history-file be used?
 }
 
 // RL History Information

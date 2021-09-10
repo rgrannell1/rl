@@ -4,8 +4,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: snapcore/action-build@v1
-    - run: |
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Build Snap Package
+      id: snapcraft
+      uses: snapcore/action-build@v1
+
+    - name: Test Installation
+      run: |
         sudo snap install --dangerous ${{ steps.snapcraft.outputs.snap }}
         rl -h

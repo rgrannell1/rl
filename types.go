@@ -2,6 +2,7 @@ package main
 
 import (
 	"os/exec"
+	"time"
 
 	"github.com/rivo/tview"
 )
@@ -28,4 +29,23 @@ type LineChangeCtx struct {
 	execute     *string         // a string to execute in a user's shell
 	environment []string        // an array of this processes environmental variables
 	tgt         *tview.TextView // where to pipe output
+}
+
+// RL Configuration structure
+type ConfigOpts struct {
+	HistoryPath string // the history path for RL
+	ConfigPath  string // the config path for RL
+	Config      RLConfigFile
+}
+
+type RLConfigFile struct {
+	SaveHistory bool `yaml:"save_history"`
+}
+
+type History struct {
+	Input     string    `json:"input"`
+	Command   string    `json:"command"`
+	Template  string    `json:"template"`
+	Time      time.Time `json:"time"`
+	StartTime time.Time `json:"start_time"`
 }

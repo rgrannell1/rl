@@ -1,5 +1,5 @@
 
-# rl
+# rl [![CI](https://github.com/rgrannell1/rl/actions/workflows/ci.yaml/badge.svg)](https://github.com/rgrannell1/rl/actions/workflows/ci.yaml)
 
 rl (readline) allows users to run commands like grep interactively.
 

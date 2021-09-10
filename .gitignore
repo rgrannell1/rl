@@ -2,3 +2,4 @@
 .vscode/settings.json
 __debug_bin
 rl
+*.snap

@@ -1,7 +1,7 @@
 
 # rl
 
-rl (readline) is an interactive line-editor. It allows users to run commands like grep interactively.
+rl (readline) allows users to run commands like grep interactively.
 
 For example, `rl` can interactively search files for a keyword in your notes folder, then open your final matches in VSCode.
 

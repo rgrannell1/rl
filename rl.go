@@ -160,6 +160,12 @@ func RL(inputOnly bool, execute *string) int {
 	}
 
 	app := tview.NewApplication()
+	// -- we actually want to do the opposite; this prevents scroll from breaking things.
+	app.EnableMouse(true)
+	app.SetMouseCapture(func(event *tcell.EventMouse, action tview.MouseAction) (*tcell.EventMouse, tview.MouseAction) {
+		return nil, 0
+	})
+
 	tview.Styles.PrimitiveBackgroundColor = tcell.ColorDefault
 	tview.Styles.ContrastBackgroundColor = tcell.ColorDefault
 

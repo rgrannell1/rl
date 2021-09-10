@@ -14,4 +14,4 @@ jobs:
     - name: Test Installation
       run: |
         sudo snap install --devmode --dangerous ${{ steps.snapcraft.outputs.snap }}
-        rl -h
+        /snap/rl/current/bin/rl -h

@@ -8,6 +8,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"github.com/smallnest/ringbuffer"
 )
 
 const ENVAR_NAME_RL_INPUT = "RL_INPUT"
@@ -36,19 +37,6 @@ func RL(inputOnly bool, execute *string) int {
 	}
 	tty.Close()
 
-	ctx := LineChangeCtx{
-		os.Getenv("SHELL"),
-		inputOnly,
-		execute,
-		os.Environ(),
-		nil,
-	}
-
-	if ctx.shell == "" {
-		fmt.Printf("RL: could not determine user's shell (e.g bash, zsh). Ensure $SHELL is set.")
-		return 1
-	}
-
 	piped, pipeErr := StdinPiped()
 	if pipeErr != nil {
 		fmt.Printf("RL: could not inspect whether sdin was piped in.")
@@ -56,10 +44,26 @@ func RL(inputOnly bool, execute *string) int {
 		return 1
 	}
 
-	// read from standard input and redirect to subcommands
-	if piped {
-		fmt.Printf("RL: WIP, stdin not implemented.")
+	stdin := ringbuffer.New(1000 * 10) // 10MB
+
+	ctx := LineChangeCtx{
+		os.Getenv("SHELL"),
+		inputOnly,
+		execute,
+		os.Environ(),
+		nil,
+		stdin,
+	}
+
+	if ctx.shell == "" {
+		fmt.Printf("RL: could not determine user's shell (e.g bash, zsh). Ensure $SHELL is set.")
 		return 1
+	}
+
+	// read from standard input and redirect to subcommands. Input can be infinite,
+	// so manage this read from a goroutine an read into a circular buffer
+	if piped {
+		go StdinReader(stdin)
 	}
 
 	histChan := make(chan *History)

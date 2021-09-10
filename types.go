@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/rivo/tview"
+	"github.com/smallnest/ringbuffer"
 )
 
 //  Stores user-input text, and whether a terminal character has been reached.
@@ -22,11 +23,12 @@ type LineChangeState struct {
 
 // Contextual contantish information like the user's shell, environmental variables, and command-line options
 type LineChangeCtx struct {
-	shell       string          // the user's shell-variable
-	inputOnly   bool            // should we only return the user's input (e.g lineBuffer) instead of the final command execution, if we're running in execute mode?
-	execute     *string         // a string to execute in a user's shell
-	environment []string        // an array of this processes environmental variables
-	tgt         *tview.TextView // where to pipe output
+	shell       string                 // the user's shell-variable
+	inputOnly   bool                   // should we only return the user's input (e.g lineBuffer) instead of the final command execution, if we're running in execute mode?
+	execute     *string                // a string to execute in a user's shell
+	environment []string               // an array of this processes environmental variables
+	tgt         *tview.TextView        // where to pipe output
+	stdin       *ringbuffer.RingBuffer // a buffer containing as much stdin as we are willing to store
 }
 
 // RL Configuration structure

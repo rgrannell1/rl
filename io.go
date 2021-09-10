@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"os"
 	"syscall"
+
+	"github.com/smallnest/ringbuffer"
 )
 
 // Allow user writes, no other permissions
@@ -20,6 +23,8 @@ func OpenTTY() (*os.File, error) {
 	return os.NewFile(uintptr(fd), "pipe"), nil
 }
 
+// Detect whether input was piped into stdin; ie. if we
+// need to receive that input, buffer it, and pass it to subcommands.
 func StdinPiped() (bool, error) {
 	fi, err := os.Stdin.Stat()
 
@@ -30,6 +35,19 @@ func StdinPiped() (bool, error) {
 	return fi.Mode()&os.ModeCharDevice == 0, nil
 }
 
-func ReadStdin() {
+// Read input from stdin into a buffer
+func StdinReader(input *ringbuffer.RingBuffer) {
+	scanner := bufio.NewScanner(os.Stdin)
 
+	for {
+		scanner.Scan()
+		bytes := scanner.Bytes()
+
+		if len(bytes) != 0 {
+			input.Write([]byte(bytes))
+		} else {
+			input.Free()
+			break
+		}
+	}
 }

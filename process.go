@@ -14,6 +14,10 @@ func StartCommand(lineBuffer *LineBuffer, ctx *LineChangeCtx) (*exec.Cmd, error)
 	// flag, this wil vary between shells. but it works for zsh and bash.
 	cmd := exec.Command(ctx.shell, "-c", *ctx.execute)
 
+	if piped, _ := StdinPiped(); piped {
+		cmd.Stdin = ctx.stdin
+	}
+
 	// by default, go will use the current  process's environment. Merge RL_INPUT into that list and provide it to the command
 	cmd.Env = append(ctx.environment, ENVAR_NAME_RL_INPUT+"="+lineBuffer.content)
 

@@ -38,14 +38,16 @@ type ConfigOpts struct {
 	Config      RLConfigFile
 }
 
+// RL Configuration file-data
 type RLConfigFile struct {
 	SaveHistory bool `yaml:"save_history"`
 }
 
+// RL History Information
 type History struct {
-	Input     string    `json:"input"`
-	Command   string    `json:"command"`
-	Template  string    `json:"template"`
-	Time      time.Time `json:"time"`
-	StartTime time.Time `json:"start_time"`
+	Input     string    `json:"input"`      // The user-entered input text
+	Command   string    `json:"command"`    // The command executed
+	Template  string    `json:"template"`   // The 'template' the user provided to -x
+	Time      time.Time `json:"time"`       // The time the command was started, approximately
+	StartTime time.Time `json:"start_time"` // The start-time of the program, approximately. Can be used as an ID.
 }

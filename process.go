@@ -14,7 +14,12 @@ func StartCommand(lineBuffer *LineBuffer, ctx *LineChangeCtx) (*exec.Cmd, error)
 	// flag, this wil vary between shells. but it works for zsh and bash.
 	cmd := exec.Command(ctx.shell, "-c", *ctx.execute)
 
-	if piped, _ := StdinPiped(); piped {
+	piped, err := StdinPiped()
+	if err != nil {
+		panic(err)
+	}
+
+	if piped {
 		cmd.Stdin = ctx.stdin
 	}
 
@@ -34,7 +39,7 @@ func StartCommand(lineBuffer *LineBuffer, ctx *LineChangeCtx) (*exec.Cmd, error)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	// start the command, but don't wait for the command to complete or error-check that it started
-	err := cmd.Start()
+	err = cmd.Start()
 
 	go func(cmd *exec.Cmd) {
 		// wait performs cleanup tasks; without this a large number of threads pile-up in this process.

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"io"
 	"os"
 	"syscall"
 
@@ -37,17 +38,13 @@ func StdinPiped() (bool, error) {
 
 // Read input from stdin into a buffer
 func StdinReader(input *ringbuffer.RingBuffer) {
-	scanner := bufio.NewScanner(os.Stdin)
-
+	in := bufio.NewReader(os.Stdin)
 	for {
-		scanner.Scan()
-		bytes := scanner.Bytes()
-
-		if len(bytes) != 0 {
-			input.Write([]byte(bytes))
-		} else {
-			input.Free()
+		by, err := in.ReadByte()
+		if err == io.EOF {
 			break
 		}
+
+		input.Write([]byte{by})
 	}
 }

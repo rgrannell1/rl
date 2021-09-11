@@ -33,9 +33,9 @@ type LineChangeCtx struct {
 
 // RL Configuration structure
 type ConfigOpts struct {
-	HistoryPath string // the history path for RL
-	ConfigPath  string // the config path for RL
-	Config      RLConfigFile
+	HistoryPath string       // the history path for RL
+	ConfigPath  string       // the config path for RL
+	Config      RLConfigFile // RL configuration
 }
 
 // RL Configuration file-data

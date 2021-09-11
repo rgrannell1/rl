@@ -13,6 +13,7 @@ import (
 
 const ENVAR_NAME_RL_INPUT = "RL_INPUT"
 
+// Update the UI header
 func updateHeader(header *tview.TextView, command string, buffer *LineBuffer) {
 	summary := strings.ReplaceAll(command, "$"+ENVAR_NAME_RL_INPUT, "[red]"+buffer.content+"[default]")
 
@@ -97,6 +98,7 @@ func RL(inputOnly bool, execute *string) int {
 
 	main := tview.NewTextView().
 		SetText("").
+		SetDynamicColors(true).
 		SetTextColor(tcell.ColorDefault).
 		SetChangedFunc(func() {
 			app.Draw()

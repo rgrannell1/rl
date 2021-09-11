@@ -1,9 +1,13 @@
 package main
 
 import (
+	"bytes"
+	"io"
 	"os"
 	"os/exec"
 	"syscall"
+
+	"github.com/rivo/tview"
 )
 
 // Given the user-input, and contextual information, start a provided command in the user's shell
@@ -20,11 +24,15 @@ func StartCommand(lineBuffer *LineBuffer, ctx *LineChangeCtx) (*exec.Cmd, error)
 	}
 
 	if piped {
-		cmd.Stdin = ctx.stdin
+		// construct a new reader
+		cmd.Stdin = bytes.NewReader(ctx.stdin.Bytes())
 	}
 
 	// by default, go will use the current  process's environment. Merge RL_INPUT into that list and provide it to the command
 	cmd.Env = append(ctx.environment, ENVAR_NAME_RL_INPUT+"="+lineBuffer.content)
+
+	var buff bytes.Buffer
+	multiwrite := io.MultiWriter(ctx, &buff)
 
 	// only output the result of the last command-execution to standard-output; otherwise just show it on the tty
 	if lineBuffer.done {
@@ -32,8 +40,9 @@ func StartCommand(lineBuffer *LineBuffer, ctx *LineChangeCtx) (*exec.Cmd, error)
 		cmd.Stderr = os.Stderr
 	} else {
 		nastyGlobalState = true
-		cmd.Stdout = ctx
-		cmd.Stderr = ctx // this could be refined
+
+		cmd.Stdout = multiwrite
+		cmd.Stderr = multiwrite // this could be refined
 	}
 	// set the pgid so we can terminate this child-process and its descendents with one signal later, if we need to
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
@@ -66,7 +75,7 @@ func (ctx *LineChangeCtx) Write(data []byte) (n int, err error) {
 		ctx.tgt.Unlock()
 	}
 
-	return ctx.tgt.Write(data)
+	return tview.ANSIWriter(ctx.tgt).Write(data)
 }
 
 // Stop a running execute process by looking up the state's cmd variable,

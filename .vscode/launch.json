@@ -5,15 +5,16 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Launch Debugger",
+      "name": "Launch RL",
       "type": "go",
       "request": "launch",
       "mode": "auto",
       "program": "${workspaceFolder}",
       "env": {},
       "args": [
-        "-x", "echo hello"
-      ]
+        "-x", "echo $RL_INPUT"
+      ],
+      "debugServer": 54321
     }
   ]
 }

@@ -36,6 +36,8 @@ func StartCommand(lineBuffer *LineBuffer, ctx *LineChangeCtx) (*exec.Cmd, error)
 
 	// only output the result of the last command-execution to standard-output; otherwise just show it on the tty
 	if lineBuffer.done {
+		os.Stderr.WriteString(SubstitueCommand(ctx.execute, &lineBuffer.content) + "\n")
+
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 	} else {

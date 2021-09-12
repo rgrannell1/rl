@@ -22,6 +22,10 @@ func updateHeader(header *tview.TextView, command string, buffer *LineBuffer) {
 
 const PROMPT = "> "
 
+func SubstitueCommand(execute *string, input *string) string {
+	return strings.ReplaceAll(*execute, "$"+ENVAR_NAME_RL_INPUT, *input)
+}
+
 // Start the interactive line-editor with any provided CLI arguments
 func RL(inputOnly bool, execute *string) int {
 	tty, ttyErr := OpenTTY()
@@ -115,7 +119,7 @@ func RL(inputOnly bool, execute *string) int {
 			if cfg.Config.SaveHistory {
 				histChan <- &History{
 					Input:    text,
-					Command:  strings.ReplaceAll(*execute, "$"+ENVAR_NAME_RL_INPUT, text),
+					Command:  SubstitueCommand(execute, &text),
 					Template: *execute,
 					Time:     time.Now(),
 				}

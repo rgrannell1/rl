@@ -5,6 +5,7 @@ description: |
   rl (readline) allows users to run commands like grep interactively.
 confinement: devmode
 base: core20
+
 apps:
   rl-source:
     command: bin/rl

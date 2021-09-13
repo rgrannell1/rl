@@ -11,6 +11,9 @@ import (
 
 // RLs UI app
 type TUI struct {
+	state          *LineChangeState
+	cfg            *ConfigOpts
+	ctx            *LineChangeCtx
 	app            *TUIApp
 	commandPreview *TUICommandPreview
 	linePosition   *TUILinePosition
@@ -167,7 +170,10 @@ func NewStdoutView(tui TUI) *TUIStdoutView {
 	return &TUIStdoutView{part}
 }
 
-func NewCommandInput(tui TUI, state LineChangeState, cfg *ConfigOpts, ctx *LineChangeCtx) *TUICommandInput {
+func NewCommandInput(tui TUI) *TUICommandInput {
+	ctx := tui.ctx
+	cfg := tui.cfg
+	state := *tui.state
 	execute := ctx.execute
 
 	commandInput := tview.NewInputField()
@@ -211,6 +217,9 @@ func NewUI(state LineChangeState, cfg *ConfigOpts, ctx *LineChangeCtx, histChan 
 	execute := ctx.execute
 
 	tui := TUI{}
+	tui.state = &state
+	tui.cfg = cfg
+	tui.ctx = ctx
 
 	tui.SetTheme()
 	tui.chans.history = histChan
@@ -221,7 +230,7 @@ func NewUI(state LineChangeState, cfg *ConfigOpts, ctx *LineChangeCtx, histChan 
 	tui.stdoutViewer = NewStdoutView(tui)
 
 	ctx.tgt = tui.stdoutViewer.tview // TODO bad, weird
-	tui.commandInput = NewCommandInput(tui, state, cfg, ctx)
+	tui.commandInput = NewCommandInput(tui)
 
 	tui.InvertCommandInput()
 

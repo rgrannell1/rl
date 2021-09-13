@@ -62,6 +62,8 @@ func StartCommand(tui *TUI) (*exec.Cmd, error) {
 		count := LineCounter(buff) // todo
 
 		tui.linePosition.lineCount = count
+
+		tui.Draw()
 	}(cmd, &buff, tui)
 
 	if err != nil {

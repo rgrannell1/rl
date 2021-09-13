@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -24,6 +25,8 @@ type TUI struct {
 	}
 }
 
+// Update the line-position element based on the current
+// scroll-position
 func (tui *TUI) UpdateScrollPosition() {
 	stdout := tui.stdoutViewer.tview
 
@@ -33,12 +36,24 @@ func (tui *TUI) UpdateScrollPosition() {
 	tui.linePosition.row = row
 	tui.linePosition.col = col
 	tui.linePosition.height = height
+	lineCount := tui.linePosition.lineCount
 
-	rowStr := fmt.Sprint(row)
-	endRowStr := fmt.Sprint(row + height - 1)
-	lineCountStr := fmt.Sprint(tui.linePosition.lineCount)
+	endRow := row + height - 1
 
-	tui.linePosition.tview.SetText("line " + rowStr + "-" + endRowStr + "/" + lineCountStr)
+	rowStr := fmt.Sprint(row + 1)         // lines are normally one-indexed
+	endRowStr := fmt.Sprint(endRow)       // the last line shown in the buffer
+	lineCountStr := fmt.Sprint(lineCount) // the total line count produced by standard-output last execution
+
+	var percentStr = ""
+
+	if lineCount == 0 {
+		percentStr = ""
+	} else {
+		ratio := float64(endRow) / float64(lineCount)
+		percentStr = fmt.Sprint(math.Round(1_000.0*ratio)/10.0) + "%"
+	}
+
+	tui.linePosition.tview.SetText("line " + rowStr + "-" + endRowStr + "/" + lineCountStr + "    [blue]" + percentStr + "[blue]")
 }
 
 // Invert text command-input
@@ -150,9 +165,11 @@ func NewCommandPreview(execute *string) *TUICommandPreview {
 // the standard output viewer.
 func NewLinePosition() *TUILinePosition {
 	part := tview.NewTextView().
-		SetText("").SetTextColor(tcell.ColorDefault)
+		SetText("").
+		SetTextColor(tcell.ColorDefault).
+		SetDynamicColors(true)
 
-	return &TUILinePosition{part, 0, 0, 0, 0}
+	return &TUILinePosition{part, 0, 0, 1, 0}
 }
 
 // Create RL tview application

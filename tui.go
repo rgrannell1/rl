@@ -24,6 +24,23 @@ type TUI struct {
 	}
 }
 
+func (tui *TUI) UpdateScrollPosition() {
+	stdout := tui.stdoutViewer.tview
+
+	row, col := stdout.GetScrollOffset()
+	_, _, _, height := stdout.GetInnerRect()
+
+	tui.linePosition.row = row
+	tui.linePosition.col = col
+	tui.linePosition.height = height
+
+	rowStr := fmt.Sprint(row)
+	endRowStr := fmt.Sprint(row + height - 1)
+	lineCountStr := fmt.Sprint(tui.linePosition.lineCount)
+
+	tui.linePosition.tview.SetText("line " + rowStr + "-" + endRowStr + "/" + lineCountStr)
+}
+
 // Invert text command-input
 func (tui *TUI) InvertCommandInput() {
 	//input := tui.commandInput
@@ -103,7 +120,11 @@ func (prev *TUICommandPreview) UpdateText(command string, buffer *LineBuffer) {
 
 // A component for the line-position in the stdout viewer
 type TUILinePosition struct {
-	tview *tview.TextView
+	tview     *tview.TextView
+	lineCount int
+	height    int
+	row       int
+	col       int
 }
 
 // A component for the stdout viewer
@@ -131,7 +152,7 @@ func NewLinePosition() *TUILinePosition {
 	part := tview.NewTextView().
 		SetText("").SetTextColor(tcell.ColorDefault)
 
-	return &TUILinePosition{part}
+	return &TUILinePosition{part, 0, 0, 0, 0}
 }
 
 // Create RL tview application
@@ -152,14 +173,23 @@ func NewRLApp() *TUIApp {
 	return &TUIApp{app}
 }
 
-func NewStdoutView(tui TUI) *TUIStdoutView {
+func NewStdoutView(tui *TUI) *TUIStdoutView {
 	part := tview.NewTextView().
 		SetText("").
 		SetDynamicColors(true).
-		SetTextColor(tcell.ColorDefault).
-		SetChangedFunc(func() {
-			tui.Draw()
-		})
+		SetTextColor(tcell.ColorDefault)
+
+	part.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		key := event.Key()
+
+		if key == tcell.KeyUp {
+			tui.UpdateScrollPosition()
+		} else if key == tcell.KeyDown {
+			tui.UpdateScrollPosition()
+		}
+
+		return event
+	})
 
 	// this breaks things?
 	//part.Focus(func(self tview.Primitive) {
@@ -170,7 +200,7 @@ func NewStdoutView(tui TUI) *TUIStdoutView {
 	return &TUIStdoutView{part}
 }
 
-func NewCommandInput(tui TUI) *TUICommandInput {
+func NewCommandInput(tui *TUI) *TUICommandInput {
 	ctx := tui.ctx
 	cfg := tui.cfg
 	state := *tui.state
@@ -181,7 +211,7 @@ func NewCommandInput(tui TUI) *TUICommandInput {
 	commandInput.
 		SetChangedFunc(func(text string) {
 			state.lineBuffer.content = text
-			state, _ = state.HandleUserUpdate(ctx)
+			state, _ = state.HandleUserUpdate(tui)
 
 			if cfg.Config.SaveHistory {
 				tui.chans.history <- &History{
@@ -198,13 +228,17 @@ func NewCommandInput(tui TUI) *TUICommandInput {
 		SetDoneFunc(func(key tcell.Key) {
 			// this is invoked for KeyEnter, KeyEscape, KeyTab, KeyDown, KeyUp, KeyBacktab.
 
-			if key == tcell.KeyUp || key == tcell.KeyDown {
+			if key == tcell.KeyUp {
 				tui.SetStdoutViewerFocus()
+				tui.UpdateScrollPosition()
+			} else if key == tcell.KeyDown {
+				tui.SetStdoutViewerFocus()
+				tui.UpdateScrollPosition()
 			} else {
 				tui.Stop()
 			}
 
-			state, _ = state.HandleUserUpdate(ctx)
+			state, _ = state.HandleUserUpdate(tui)
 		}).
 		Focus(func(self tview.Primitive) {
 			tui.InvertCommandInput()
@@ -227,10 +261,10 @@ func NewUI(state LineChangeState, cfg *ConfigOpts, ctx *LineChangeCtx, histChan 
 	tui.app = NewRLApp()
 	tui.commandPreview = NewCommandPreview(execute)
 	tui.linePosition = NewLinePosition()
-	tui.stdoutViewer = NewStdoutView(tui)
+	tui.stdoutViewer = NewStdoutView(&tui)
+	tui.commandInput = NewCommandInput(&tui)
 
 	ctx.tgt = tui.stdoutViewer.tview // TODO bad, weird
-	tui.commandInput = NewCommandInput(tui)
 
 	tui.InvertCommandInput()
 

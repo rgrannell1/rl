@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"io"
 	"os"
 	"strings"
@@ -51,4 +52,19 @@ func StdinReader(input *ringbuffer.RingBuffer) {
 // useful to visualise what was run by the user
 func SubstitueCommand(execute *string, input *string) string {
 	return strings.ReplaceAll(*execute, "$"+ENVAR_NAME_RL_INPUT, *input)
+}
+
+// Get line-count in bytes.Buffer
+func LineCounter(content *bytes.Buffer) int {
+	count := 0
+
+	for {
+		_, err := content.ReadBytes('\n')
+
+		if err == nil {
+			count += 1
+		} else {
+			return count
+		}
+	}
 }

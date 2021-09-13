@@ -13,9 +13,13 @@ import (
 // Given the user-input, and contextual information, start a provided command in the user's shell
 // and point it at /dev/tty if in preview mode, or standard-output if the linebuffer is done. This command
 // will have access to an environmental variable containing the user's input
-func StartCommand(lineBuffer *LineBuffer, ctx *LineChangeCtx) (*exec.Cmd, error) {
+func StartCommand(tui *TUI) (*exec.Cmd, error) {
 	// run the provided command in the user's shell. We don't know for certain -c is the correct
 	// flag, this wil vary between shells. but it works for zsh and bash.
+
+	ctx := tui.ctx
+	lineBuffer := tui.state.lineBuffer
+
 	cmd := exec.Command(ctx.shell, "-c", *ctx.execute)
 
 	piped, err := StdinPiped()
@@ -52,10 +56,13 @@ func StartCommand(lineBuffer *LineBuffer, ctx *LineChangeCtx) (*exec.Cmd, error)
 	// start the command, but don't wait for the command to complete or error-check that it started
 	err = cmd.Start()
 
-	go func(cmd *exec.Cmd) {
+	go func(cmd *exec.Cmd, buff *bytes.Buffer, tui *TUI) {
 		// wait performs cleanup tasks; without this a large number of threads pile-up in this process.
 		cmd.Wait()
-	}(cmd)
+		count := LineCounter(buff) // todo
+
+		tui.linePosition.lineCount = count
+	}(cmd, &buff, tui)
 
 	if err != nil {
 		return nil, err
@@ -106,10 +113,10 @@ func (state *LineChangeState) StopProcess() error {
 // - clear the terminal, if required
 // - cleanup any old processes running
 // - print the command-output to tview or standard output
-func (state LineChangeState) HandleUserUpdate(ctx *LineChangeCtx) (LineChangeState, error) {
+func (state LineChangeState) HandleUserUpdate(tui *TUI) (LineChangeState, error) {
 	state.StopProcess()
 
-	cmd, startErr := StartCommand(state.lineBuffer, ctx)
+	cmd, startErr := StartCommand(tui)
 
 	if startErr != nil {
 		return state, startErr

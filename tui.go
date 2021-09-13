@@ -21,6 +21,22 @@ type TUI struct {
 	}
 }
 
+// Invert text command-input
+func (tui *TUI) InvertCommandInput() {
+	//input := tui.commandInput
+
+	// TODO pick up system colours
+	//input.tview.SetFieldBackgroundColor()
+	//input.tview.SetFieldTextColor()
+}
+
+// Set initial theme overrides, so tview uses default
+// system colours rather than tcell theme overrides
+func (tui *TUI) SetTheme() {
+	tview.Styles.PrimitiveBackgroundColor = tcell.ColorDefault
+	tview.Styles.ContrastBackgroundColor = tcell.ColorDefault
+}
+
 // Redraw the application
 func (tui *TUI) Draw() {
 	tui.app.tview.Draw()
@@ -97,10 +113,6 @@ type TUICommandInput struct {
 	tview *tview.InputField
 }
 
-func (input *TUICommandInput) Invert() {
-
-}
-
 // Create the command-preview element; this will show what the user is actually executing
 func NewCommandPreview(execute *string) *TUICommandPreview {
 	part := tview.NewTextView().
@@ -148,9 +160,8 @@ func NewStdoutView(tui TUI) *TUIStdoutView {
 
 	// this breaks things?
 	//part.Focus(func(self tview.Primitive) {
-	//		tui.commandInput.tview.SetBackgroundColor(tcell.ColorDefault)
-	//		tui.commandInput.tview.SetFieldTextColor(tcell.ColorDefault)
-	//		tui.Draw()
+	//	tui.commandInput.tview.SetBackgroundColor(tcell.ColorDefault)
+	//	tui.commandInput.tview.SetFieldTextColor(tcell.ColorDefault)
 	//})
 
 	return &TUIStdoutView{part}
@@ -160,10 +171,6 @@ func NewCommandInput(tui TUI, state LineChangeState, cfg *ConfigOpts, ctx *LineC
 	execute := ctx.execute
 
 	commandInput := tview.NewInputField()
-
-	// by default, invert
-	//	commandInput.SetFieldTextColor(tview.Styles.ContrastBackgroundColor)
-	//	commandInput.SetFieldBackgroundColor(tview.Styles.PrimaryTextColor)
 
 	commandInput.
 		SetChangedFunc(func(text string) {
@@ -194,10 +201,7 @@ func NewCommandInput(tui TUI, state LineChangeState, cfg *ConfigOpts, ctx *LineC
 			state, _ = state.HandleUserUpdate(ctx)
 		}).
 		Focus(func(self tview.Primitive) {
-			commandInput.SetBackgroundColor(tview.Styles.PrimitiveBackgroundColor)
-			commandInput.SetFieldTextColor(tview.Styles.InverseTextColor)
-
-			tui.Draw()
+			tui.InvertCommandInput()
 		})
 
 	return &TUICommandInput{commandInput}
@@ -206,11 +210,9 @@ func NewCommandInput(tui TUI, state LineChangeState, cfg *ConfigOpts, ctx *LineC
 func NewUI(state LineChangeState, cfg *ConfigOpts, ctx *LineChangeCtx, histChan chan *History) *TUI {
 	execute := ctx.execute
 
-	tview.Styles.PrimitiveBackgroundColor = tcell.ColorDefault
-	tview.Styles.ContrastBackgroundColor = tcell.ColorDefault
-
 	tui := TUI{}
 
+	tui.SetTheme()
 	tui.chans.history = histChan
 
 	tui.app = NewRLApp()
@@ -219,8 +221,9 @@ func NewUI(state LineChangeState, cfg *ConfigOpts, ctx *LineChangeCtx, histChan 
 	tui.stdoutViewer = NewStdoutView(tui)
 
 	ctx.tgt = tui.stdoutViewer.tview // TODO bad, weird
-
 	tui.commandInput = NewCommandInput(tui, state, cfg, ctx)
+
+	tui.InvertCommandInput()
 
 	return &tui
 }

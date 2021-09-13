@@ -47,7 +47,8 @@ func CreateTextView(app *tview.Application) *tview.TextView {
 		})
 }
 
-func (ctx *LineChangeCtx) CreateUI(state LineChangeState, cfg ConfigOpts, histChan chan *History, execute *string) int {
+func (ctx *LineChangeCtx) CreateUI(state LineChangeState, cfg ConfigOpts, histChan chan *History) int {
+	execute := ctx.execute
 	app := CreateApp()
 	header := CreateHeader(execute)
 	stdoutViewer := CreateTextView(app)

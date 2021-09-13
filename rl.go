@@ -1,40 +1,18 @@
 package main
 
-import (
-	"os"
-)
+import "github.com/docopt/docopt-go"
 
 // Start the interactive line-editor with any provided CLI arguments; execute
 // the RL app as a whole
-func RL(inputOnly bool, rerun bool, execute *string) int {
-	shell, code := ReadShell()
-	if code != 0 {
-		return code
-	}
-
-	stdin, code := ReadStdin()
-	if code != 0 {
-		return code
-	}
-
+func RL(opts docopt.Opts) int {
 	cfg, code := ValidateConfig()
 	if code != 0 {
 		return code
 	}
 
-	ctx := LineChangeCtx{
-		shell,
-		inputOnly,
-		execute,
-		os.Environ(),
-		nil,
-		stdin,
-	}
-
-	linebuffer := LineBuffer{}
-	state := LineChangeState{
-		lineBuffer: &linebuffer,
-		cmd:        nil,
+	state, ctx, code := RLState(&opts)
+	if code != 0 {
+		return code
 	}
 
 	histChan := StartHistoryWriter(cfg)
@@ -42,5 +20,5 @@ func RL(inputOnly bool, rerun bool, execute *string) int {
 		close(histChan)
 	}()
 
-	return ctx.CreateUI(state, *cfg, histChan, execute)
+	return ctx.CreateUI(state, *cfg, histChan)
 }

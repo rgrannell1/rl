@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/adrg/xdg"
+	"github.com/docopt/docopt-go"
 	"github.com/smallnest/ringbuffer"
 	"gopkg.in/yaml.v2"
 )
@@ -209,4 +210,53 @@ func ReadShell() (string, int) {
 	}
 
 	return shell, 0
+}
+
+func RLState(opts *docopt.Opts) (LineChangeState, LineChangeCtx, int) {
+	execute, execErr := opts.String("--execute")
+
+	if execErr != nil {
+		execute = ""
+	}
+
+	inputOnly, inputErr := opts.Bool("--input-only")
+
+	if inputErr != nil {
+		fmt.Printf("RL: failed to read --input-only option. %v\n", inputErr)
+		os.Exit(1)
+	}
+
+	_, rerunErr := opts.Bool("--rerun")
+
+	if rerunErr != nil {
+		fmt.Printf("RL: failed to read --rerun option. %v\n", rerunErr)
+		os.Exit(1)
+	}
+
+	shell, code := ReadShell()
+	if code != 0 {
+		return LineChangeState{}, LineChangeCtx{}, code
+	}
+
+	stdin, code := ReadStdin()
+	if code != 0 {
+		return LineChangeState{}, LineChangeCtx{}, code
+	}
+
+	ctx := LineChangeCtx{
+		shell,
+		inputOnly,
+		&execute,
+		os.Environ(),
+		nil,
+		stdin,
+	}
+
+	linebuffer := LineBuffer{}
+	state := LineChangeState{
+		lineBuffer: &linebuffer,
+		cmd:        nil,
+	}
+
+	return state, ctx, 0
 }

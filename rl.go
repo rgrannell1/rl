@@ -20,5 +20,6 @@ func RL(opts docopt.Opts) int {
 		close(histChan)
 	}()
 
-	return ctx.CreateUI(state, *cfg, histChan)
+	tui := NewUI(state, cfg, &ctx, histChan)
+	return tui.Start()
 }

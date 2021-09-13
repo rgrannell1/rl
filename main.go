@@ -11,6 +11,7 @@ func main() {
 	usage := `rl
 Usage:
   rl [-x <cmd>|--execute <cmd>] [-i|--input-only]
+  rl (-r|--rerun)
   rl (-h|--help)
 
 Description:
@@ -24,7 +25,7 @@ Options:
 Configuration:
   ~/.config/rl.yaml    RL can be configured in this YAML file. The options are:
 
-	save_history    a boolean value. Should command-execution history be saved to a history file? Defaults to false.
+  save_history    a boolean value. Should command-execution history be saved to a history file? Defaults to false.
 
 History
   ~/.local/share/rl/history    If enabled, RL will save each executed command to a history file in JSON format.

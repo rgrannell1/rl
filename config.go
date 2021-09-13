@@ -4,12 +4,14 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
 
 	"github.com/adrg/xdg"
+	"github.com/smallnest/ringbuffer"
 	"gopkg.in/yaml.v2"
 )
 
@@ -140,4 +142,52 @@ func HistoryWriter(histChan chan *History, cfg *ConfigOpts) {
 		writer.Flush()
 		fileLock.Unlock()
 	}
+}
+
+func StartHistoryWriter(cfg *ConfigOpts) chan *History {
+	// write to RL history, if that's configured
+	histChan := make(chan *History)
+
+	if cfg.Config.SaveHistory {
+		go HistoryWriter(histChan, cfg)
+	}
+
+	return histChan
+}
+
+func ReadStdin() (*ringbuffer.RingBuffer, int) {
+	stdin := ringbuffer.New(1000 * 10) // 10MB
+
+	piped, pipeErr := StdinPiped()
+
+	if pipeErr != nil {
+		fmt.Printf("RL: could not inspect whether sdin was piped in.")
+		return stdin, 1
+	}
+
+	// read from standard input and redirect to subcommands. Input can be infinite,
+	// so manage this read from a goroutine an read into a circular buffer
+	if piped {
+		go StdinReader(stdin)
+	}
+
+	return stdin, 0
+}
+
+func ValidateConfig() (*ConfigOpts, int) {
+	tty, ttyErr := OpenTTY()
+	cfg, cfgErr := InitConfig()
+
+	if cfgErr != nil {
+		fmt.Printf("RL: Failed to read configuration: %s\n", cfgErr)
+		return cfg, 1
+	}
+
+	if ttyErr != nil {
+		fmt.Printf("RL: could not open /dev/tty. Are you running rl non-interactively?")
+		return cfg, 1
+	}
+	tty.Close()
+
+	return cfg, 0
 }

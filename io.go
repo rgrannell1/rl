@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"io"
 	"os"
+	"strings"
 	"syscall"
 
 	"github.com/smallnest/ringbuffer"
@@ -47,4 +48,8 @@ func StdinReader(input *ringbuffer.RingBuffer) {
 
 		input.Write([]byte{by})
 	}
+}
+
+func SubstitueCommand(execute *string, input *string) string {
+	return strings.ReplaceAll(*execute, "$"+ENVAR_NAME_RL_INPUT, *input)
 }

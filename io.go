@@ -10,9 +10,6 @@ import (
 	"github.com/smallnest/ringbuffer"
 )
 
-// Allow user writes, no other permissions
-const USER_WRITE_OCTAL = 00200
-
 // Open /dev/tty with user write-only permissions. If it fails to open, return
 // an error that will indicate this tool is being run in non-interactive mode
 func OpenTTY() (*os.File, error) {
@@ -37,7 +34,7 @@ func StdinPiped() (bool, error) {
 	return fi.Mode()&os.ModeCharDevice == 0, nil
 }
 
-// Read input from stdin into a buffer
+// Read input from stdin into a circular-buffer
 func StdinReader(input *ringbuffer.RingBuffer) {
 	in := bufio.NewReader(os.Stdin)
 	for {
@@ -50,6 +47,8 @@ func StdinReader(input *ringbuffer.RingBuffer) {
 	}
 }
 
+// Substitute user-input into a command in place of the environment name;
+// useful to visualise what was run by the user
 func SubstitueCommand(execute *string, input *string) string {
 	return strings.ReplaceAll(*execute, "$"+ENVAR_NAME_RL_INPUT, *input)
 }

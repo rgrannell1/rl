@@ -63,5 +63,12 @@ License:
 		os.Exit(1)
 	}
 
-	os.Exit(RL(input, &execute))
+	rerun, rerunErr := opts.Bool("--rerun")
+
+	if rerunErr != nil {
+		fmt.Printf("RL: failed to read --rerun option. %v\n", rerunErr)
+		os.Exit(1)
+	}
+
+	os.Exit(RL(input, rerun, &execute))
 }

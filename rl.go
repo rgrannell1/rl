@@ -1,16 +1,15 @@
 package main
 
 import (
-	"fmt"
 	"os"
 )
 
-// Start the interactive line-editor with any provided CLI arguments
-func RL(inputOnly bool, execute *string) int {
-	shell := os.Getenv("SHELL")
-	if shell == "" {
-		fmt.Printf("RL: could not determine user's shell (e.g bash, zsh). Ensure $SHELL is set.")
-		return 1
+// Start the interactive line-editor with any provided CLI arguments; execute
+// the RL app as a whole
+func RL(inputOnly bool, rerun bool, execute *string) int {
+	shell, code := ReadShell()
+	if code != 0 {
+		return code
 	}
 
 	stdin, code := ReadStdin()

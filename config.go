@@ -15,14 +15,16 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// Read RL configuration from a standard file-path.
+// Read RL configuration from a standard file-path. RL configuration
+// will be a YAML file
 func ReadConfig(cfg *ConfigOpts) (*ConfigOpts, error) {
-	// read configuration
 	cfgConn, err := os.Open(cfg.ConfigPath)
 	if err != nil {
 		return cfg, err
 	}
-	defer cfgConn.Close()
+	defer func() {
+		cfgConn.Close()
+	}()
 
 	var rlCfg RLConfigFile
 
@@ -67,7 +69,8 @@ func CreateConfigFile(cfg *ConfigOpts) error {
 	return nil
 }
 
-// Create a history file, if it doesn't exist already
+// Create a history file, if it doesn't exist already. This may not
+// actually be used, depending on user-configuration
 func CreateHistoryFile(cfg *ConfigOpts) error {
 	histConn, err := os.OpenFile(cfg.HistoryPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0700)
 	if err != nil {
@@ -84,6 +87,7 @@ func CreateHistoryFile(cfg *ConfigOpts) error {
 // Initialise RL configuration; create required configuration directories
 // and files, and return configuration that's already present
 func InitConfig() (*ConfigOpts, error) {
+	// use XDG specification paths for configuration & data
 	configPath := filepath.Join(xdg.ConfigHome, "rl.yaml")
 	dataDir := filepath.Join(xdg.DataHome, "rl")
 	historyPath := filepath.Join(dataDir, "history")
@@ -95,14 +99,11 @@ func InitConfig() (*ConfigOpts, error) {
 	}
 
 	// ensure XDG directories exist
-	err := os.MkdirAll(xdg.ConfigHome, 0700)
-	if err != nil {
-		return &cfg, err
-	}
-
-	err = os.MkdirAll(dataDir, 0700)
-	if err != nil {
-		return &cfg, err
+	for _, dir := range []string{xdg.ConfigHome, dataDir} {
+		err := os.MkdirAll(dir, 0700)
+		if err != nil {
+			return &cfg, err
+		}
 	}
 
 	if cfgErr := CreateConfigFile(&cfg); cfgErr != nil {
@@ -113,21 +114,22 @@ func InitConfig() (*ConfigOpts, error) {
 		return &cfg, histErr
 	}
 
+	// Read configuration; if it already exists there might be user configuration here
 	return ReadConfig(&cfg)
 }
 
-var fileLock = sync.Mutex{}
-
-// Write to file history, if
+// Write to file history when history events are sent via a channel.
+// This will not be used if the user has history disabled
 func HistoryWriter(histChan chan *History, cfg *ConfigOpts) {
+	var historyLock = sync.Mutex{}
 	histConn, _ := os.OpenFile(cfg.HistoryPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0700)
 	writer := bufio.NewWriter(histConn)
 
 	defer func() {
-		fileLock.Lock()
+		historyLock.Lock()
 		histConn.Close()
 		writer.Flush()
-		fileLock.Unlock()
+		historyLock.Unlock()
 	}()
 
 	startTime := time.Now()
@@ -137,13 +139,14 @@ func HistoryWriter(histChan chan *History, cfg *ConfigOpts) {
 		hist.StartTime = startTime
 		entry, _ := json.MarshalIndent(hist, "", " ")
 
-		fileLock.Lock()
+		historyLock.Lock()
 		writer.WriteString(string(entry) + "\n")
 		writer.Flush()
-		fileLock.Unlock()
+		historyLock.Unlock()
 	}
 }
 
+// Depending on configuration, initialise history writer
 func StartHistoryWriter(cfg *ConfigOpts) chan *History {
 	// write to RL history, if that's configured
 	histChan := make(chan *History)
@@ -155,13 +158,16 @@ func StartHistoryWriter(cfg *ConfigOpts) chan *History {
 	return histChan
 }
 
+// Read standard-input into a circular buffer; stdin can be infinite, and
+// often is when using commands like `journalctl`, we don't want to exhaust all memory
+// attempting to store it.
 func ReadStdin() (*ringbuffer.RingBuffer, int) {
-	stdin := ringbuffer.New(1000 * 10) // 10MB
+	stdin := ringbuffer.New(STDIN_BUFFER_SIZE)
 
 	piped, pipeErr := StdinPiped()
 
 	if pipeErr != nil {
-		fmt.Printf("RL: could not inspect whether sdin was piped in.")
+		fmt.Printf("RL: could not inspect whether stdin was piped into RL")
 		return stdin, 1
 	}
 
@@ -174,6 +180,7 @@ func ReadStdin() (*ringbuffer.RingBuffer, int) {
 	return stdin, 0
 }
 
+// Validate user-configuration before starting RL properly
 func ValidateConfig() (*ConfigOpts, int) {
 	tty, ttyErr := OpenTTY()
 	cfg, cfgErr := InitConfig()
@@ -190,4 +197,16 @@ func ValidateConfig() (*ConfigOpts, int) {
 	tty.Close()
 
 	return cfg, 0
+}
+
+// Read the user's SHELL variable from the environment; this will normally be bash or zsh. If it's present,
+// just assume it's accurate, the user would have to lie for it to be set incorrectly most likely
+func ReadShell() (string, int) {
+	shell := os.Getenv("SHELL")
+	if shell == "" {
+		fmt.Printf("RL: could not determine user's shell (e.g bash, zsh). Ensure $SHELL is set.")
+		return shell, 1
+	}
+
+	return shell, 0
 }

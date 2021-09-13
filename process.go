@@ -20,11 +20,11 @@ func StartCommand(lineBuffer *LineBuffer, ctx *LineChangeCtx) (*exec.Cmd, error)
 
 	piped, err := StdinPiped()
 	if err != nil {
-		panic(err)
+		return cmd, err
 	}
 
 	if piped {
-		// construct a new reader
+		// construct a new reader from stdin bytes
 		cmd.Stdin = bytes.NewReader(ctx.stdin.Bytes())
 	}
 
@@ -41,7 +41,7 @@ func StartCommand(lineBuffer *LineBuffer, ctx *LineChangeCtx) (*exec.Cmd, error)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 	} else {
-		nastyGlobalState = true
+		VERY_NASTY_GLOBAL_STATE = true
 
 		cmd.Stdout = multiwrite
 		cmd.Stderr = multiwrite // this could be refined
@@ -64,16 +64,16 @@ func StartCommand(lineBuffer *LineBuffer, ctx *LineChangeCtx) (*exec.Cmd, error)
 	}
 }
 
-var nastyGlobalState = true
+var VERY_NASTY_GLOBAL_STATE = true
 
 // Implement IO.Writer for Ctx so we can clear _just before_ the new command text is received,
 // so we don't see flashes and latency
 func (ctx *LineChangeCtx) Write(data []byte) (n int, err error) {
 	// this will panic if a lock isn't set!
-	if nastyGlobalState {
+	if VERY_NASTY_GLOBAL_STATE {
 		ctx.tgt.Lock()
 		ctx.tgt.Clear()
-		nastyGlobalState = false
+		VERY_NASTY_GLOBAL_STATE = false
 		ctx.tgt.Unlock()
 	}
 

@@ -51,3 +51,10 @@ type History struct {
 	Time      time.Time `json:"time"`       // The time the command was started, approximately
 	StartTime time.Time `json:"start_time"` // The start-time of the program, approximately. Can be used as an ID.
 }
+
+type PromptMode int
+
+const (
+	CommandPrompt PromptMode = iota
+	PagePrompt
+)

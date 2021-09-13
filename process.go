@@ -59,7 +59,7 @@ func StartCommand(tui *TUI) (*exec.Cmd, error) {
 	go func(cmd *exec.Cmd, buff *bytes.Buffer, tui *TUI) {
 		// wait performs cleanup tasks; without this a large number of threads pile-up in this process.
 		cmd.Wait()
-		count := LineCounter(buff) // todo
+		count := LineCounter(buff) // todo this does not work reliably
 
 		tui.linePosition.lineCount = count
 

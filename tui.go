@@ -85,11 +85,13 @@ type TUIApp struct {
 // Focus on stdout viewer
 func (tui *TUI) SetStdoutViewerFocus() {
 	tui.app.tview.SetFocus(tui.stdoutViewer.tview)
+	tui.SetPrompt(PagePrompt)
 }
 
 // Focus on input
 func (tui *TUI) SetInputFocus() {
 	tui.app.tview.SetFocus(tui.commandInput.tview)
+	tui.SetPrompt(CommandPrompt)
 }
 
 // Store RL's TUI
@@ -150,6 +152,14 @@ type TUIStdoutView struct {
 // A component for the RL text-input field
 type TUICommandInput struct {
 	tview *tview.InputField
+}
+
+func (tui *TUI) SetPrompt(mode PromptMode) {
+	if mode == CommandPrompt {
+		tui.commandInput.tview.SetLabel(PROMPT_CMD)
+	} else if mode == PagePrompt {
+		tui.commandInput.tview.SetLabel(PROMPT_VIEW)
+	}
 }
 
 // Create the command-preview element; this will show what the user is actually executing
@@ -241,7 +251,7 @@ func NewCommandInput(tui *TUI) *TUICommandInput {
 
 			tui.commandPreview.UpdateText(*execute, state.lineBuffer)
 		}).
-		SetLabel(PROMPT).
+		SetLabel(PROMPT_CMD).
 		SetDoneFunc(func(key tcell.Key) {
 			// this is invoked for KeyEnter, KeyEscape, KeyTab, KeyDown, KeyUp, KeyBacktab.
 

@@ -3,6 +3,8 @@
 
 rl (readline) allows users to run commands like grep interactively.
 
+[![asciicast](https://asciinema.org/a/SA2zV7ENzE55MzxSJSQlgikHu.svg)](https://asciinema.org/a/SA2zV7ENzE55MzxSJSQlgikHu)
+
 For example, `rl` can interactively search files for a keyword in your notes folder, then open your final matches in VSCode.
 
 ```bash

@@ -10,6 +10,26 @@ import (
 	"github.com/rivo/tview"
 )
 
+// Wait for started commands to complete.
+func AwaitCommand(cmd *exec.Cmd, buff *bytes.Buffer, tui *TUI) {
+	// wait performs cleanup tasks; without this a large number of threads pile-up in this process.
+	if tui.GetDone() {
+		// TODO race conditions?
+		tui.Stop()
+		cmd.Wait()
+	} else {
+		cmd.Wait()
+
+		count := LineCounter(buff) // TODO this does not work reliably
+		tui.linePosition.lineCount = count
+
+		// TODO by default, scroll seems to lock to the bottom of the document. TODO may be annoying
+		// if you scrolled in view mode and tried to apply highlighting / line-number respecting filters.
+		tui.stdoutViewer.tview.ScrollToBeginning()
+		tui.Draw()
+	}
+}
+
 // Given the user-input, and contextual information, start a provided command in the user's shell
 // and point it at /dev/tty if in preview mode, or standard-output if the linebuffer is done. This command
 // will have access to an environmental variable containing the user's input
@@ -22,6 +42,7 @@ func StartCommand(tui *TUI) (*exec.Cmd, error) {
 
 	cmd := exec.Command(ctx.shell, "-c", *ctx.execute)
 
+	// is stdin present? If it is, StdinReader will have captured it.
 	piped, err := StdinPiped()
 	if err != nil {
 		return cmd, err
@@ -36,19 +57,19 @@ func StartCommand(tui *TUI) (*exec.Cmd, error) {
 	cmd.Env = append(ctx.environment, ENVAR_NAME_RL_INPUT+"="+lineBuffer.content)
 
 	var buff bytes.Buffer
-	multiwrite := io.MultiWriter(ctx, &buff)
+	// TODO for now, copy stdout to another buffer so we can count newlines.
+	forkIo := io.MultiWriter(ctx, &buff)
 
 	// only output the result of the last command-execution to standard-output; otherwise just show it on the tty
-	if lineBuffer.done {
+	if tui.GetDone() {
 		os.Stderr.WriteString(SubstitueCommand(ctx.execute, &lineBuffer.content) + "\n")
-
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 	} else {
 		VERY_NASTY_GLOBAL_STATE = true
 
-		cmd.Stdout = multiwrite
-		cmd.Stderr = multiwrite // this could be refined
+		cmd.Stdout = forkIo
+		cmd.Stderr = forkIo // this could be refined
 	}
 	// set the pgid so we can terminate this child-process and its descendents with one signal later, if we need to
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
@@ -56,15 +77,7 @@ func StartCommand(tui *TUI) (*exec.Cmd, error) {
 	// start the command, but don't wait for the command to complete or error-check that it started
 	err = cmd.Start()
 
-	go func(cmd *exec.Cmd, buff *bytes.Buffer, tui *TUI) {
-		// wait performs cleanup tasks; without this a large number of threads pile-up in this process.
-		cmd.Wait()
-		count := LineCounter(buff) // todo this does not work reliably
-
-		tui.linePosition.lineCount = count
-
-		tui.Draw()
-	}(cmd, &buff, tui)
+	go AwaitCommand(cmd, &buff, tui)
 
 	if err != nil {
 		return nil, err

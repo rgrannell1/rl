@@ -11,7 +11,7 @@ const USER_READ_WRITE_OCTAL = 0600                                              
 type PromptMode int
 
 const (
-	CommandPrompt PromptMode = iota
-	ViewPrompt
-	HelpPrompt
+	CommandMode PromptMode = iota
+	ViewMode
+	HelpMode
 )

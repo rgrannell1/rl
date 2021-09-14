@@ -18,7 +18,7 @@ type TUI struct {
 	app            *TUIApp
 	commandPreview *TUICommandPreview
 	linePosition   *TUILinePosition
-	stdoutViewer   *TUIStdoutView
+	stdoutViewer   *TUITextViewer
 	commandInput   *TUICommandInput
 	chans          struct {
 		history chan *History
@@ -78,6 +78,10 @@ func (tui *TUI) Draw() {
 	tui.app.tview.Draw()
 }
 
+func (tui *TUI) GetDone() bool {
+	return tui.state.lineBuffer.done
+}
+
 // The application subcomponent, and operations on them
 type TUIApp struct {
 	tview *tview.Application
@@ -86,7 +90,6 @@ type TUIApp struct {
 // Focus on stdout viewer
 func (tui *TUI) SetStdoutViewerFocus() {
 	tui.app.tview.SetFocus(tui.stdoutViewer.tview)
-	tui.SetMode(ViewPrompt)
 
 	// don't show command preview
 	tui.commandInput.tview.SetText("")
@@ -95,7 +98,6 @@ func (tui *TUI) SetStdoutViewerFocus() {
 // Focus on input
 func (tui *TUI) SetInputFocus() {
 	tui.app.tview.SetFocus(tui.commandInput.tview)
-	tui.SetMode(CommandPrompt)
 }
 
 // Store RL's TUI
@@ -149,7 +151,7 @@ type TUILinePosition struct {
 }
 
 // A component for the stdout viewer
-type TUIStdoutView struct {
+type TUITextViewer struct {
 	tview *tview.TextView
 }
 
@@ -162,11 +164,13 @@ type TUICommandInput struct {
 func (tui *TUI) SetMode(mode PromptMode) {
 	tui.mode = mode
 
-	if mode == CommandPrompt {
+	if mode == CommandMode {
 		tui.commandInput.tview.SetLabel(PROMPT_CMD)
-	} else if mode == ViewPrompt {
+		tui.SetInputFocus()
+	} else if mode == ViewMode {
 		tui.commandInput.tview.SetLabel(PROMPT_VIEW)
-	} else if mode == HelpPrompt {
+		tui.SetStdoutViewerFocus()
+	} else if mode == HelpMode {
 		tui.commandInput.tview.SetLabel(HELP_VIEW)
 	}
 }
@@ -203,37 +207,48 @@ func NewRLApp() *TUIApp {
 
 	// if key-event filtering is needed, it can be applied here
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		// Ctrl + P is intercepted by VSCode; Ctrl + O is the next best thing
+		if event.Key() == tcell.KeyCtrlO {
+			// TODO
+		}
 		return event
 	})
 
 	return &TUIApp{app}
 }
 
-func NewStdoutView(tui *TUI) *TUIStdoutView {
+func NewTextViewer(tui *TUI) *TUITextViewer {
 	part := tview.NewTextView().
 		SetText("").
 		SetDynamicColors(true).
 		SetTextColor(tcell.ColorDefault)
 
-	part.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		key := event.Key()
-		ch := event.Rune()
-
-		if ch == '?' {
-			tui.SetMode(HelpPrompt)
-		} else if ch == '/' {
-			tui.SetInputFocus()
+	onInput := func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Rune() {
+		case '?':
+			tui.SetMode(HelpMode)
 			return nil
-		} else if key == tcell.KeyUp {
+		case '/':
+			tui.SetMode(CommandMode)
+			return nil
+		}
+
+		switch event.Key() {
+		case tcell.KeyUp:
 			tui.UpdateScrollPosition()
-		} else if key == tcell.KeyDown {
+			return event
+		case tcell.KeyDown:
 			tui.UpdateScrollPosition()
-		} else if key == tcell.KeyEsc {
+			return event
+		case tcell.KeyEsc:
 			tui.Stop()
+			return nil
 		}
 
 		return event
-	})
+	}
+
+	part.SetInputCapture(onInput)
 
 	// this breaks things?
 	//part.Focus(func(self tview.Primitive) {
@@ -241,7 +256,7 @@ func NewStdoutView(tui *TUI) *TUIStdoutView {
 	//	tui.commandInput.tview.SetFieldTextColor(tcell.ColorDefault)
 	//})
 
-	return &TUIStdoutView{part}
+	return &TUITextViewer{part}
 }
 
 func NewCommandInput(tui *TUI) *TUICommandInput {
@@ -250,43 +265,47 @@ func NewCommandInput(tui *TUI) *TUICommandInput {
 	state := *tui.state
 	execute := ctx.execute
 
+	// When the input is "done" according to tview is when KeyEnter, KeyEscape,
+	// KeyTab, KeyDown, KeyUp, KeyBacktab are entered. We can wire custom behaviours into these
+	// rather than just terminate the entire app! Normally, done means switch to view mode.
+	onDone := func(key tcell.Key) {
+		switch key {
+		case tcell.KeyEnter:
+			tui.state.lineBuffer.SetDone()
+			state, _ = state.HandleUserUpdate(tui)
+		case tcell.KeyUp:
+			tui.SetMode(ViewMode)
+			tui.UpdateScrollPosition()
+		case tcell.KeyDown:
+			tui.SetMode(ViewMode)
+			tui.UpdateScrollPosition()
+		case tcell.KeyEscape:
+			tui.SetMode(ViewMode)
+		}
+	}
+
+	onChange := func(text string) {
+		state.lineBuffer.content = text
+		state, _ = state.HandleUserUpdate(tui)
+
+		if cfg.Config.SaveHistory {
+			tui.chans.history <- &History{
+				Input:    text,
+				Command:  SubstitueCommand(execute, &text),
+				Template: *execute,
+				Time:     time.Now(),
+			}
+		}
+
+		tui.commandPreview.UpdateText(*execute, state.lineBuffer)
+	}
+
 	commandInput := tview.NewInputField()
 
 	commandInput.
-		SetChangedFunc(func(text string) {
-			state.lineBuffer.content = text
-			state, _ = state.HandleUserUpdate(tui)
-
-			if cfg.Config.SaveHistory {
-				tui.chans.history <- &History{
-					Input:    text,
-					Command:  SubstitueCommand(execute, &text),
-					Template: *execute,
-					Time:     time.Now(),
-				}
-			}
-
-			tui.commandPreview.UpdateText(*execute, state.lineBuffer)
-		}).
+		SetChangedFunc(onChange).
 		SetLabel(PROMPT_CMD).
-		SetDoneFunc(func(key tcell.Key) {
-			// this is invoked for KeyEnter, KeyEscape, KeyTab, KeyDown, KeyUp, KeyBacktab.
-
-			if key == tcell.KeyUp {
-				tui.SetStdoutViewerFocus()
-				tui.UpdateScrollPosition()
-			} else if key == tcell.KeyDown {
-				tui.SetStdoutViewerFocus()
-				tui.UpdateScrollPosition()
-			} else if key == tcell.KeyEsc {
-				tui.SetStdoutViewerFocus()
-				tui.SetMode(ViewPrompt)
-			} else {
-				tui.Stop()
-			}
-
-			state, _ = state.HandleUserUpdate(tui)
-		}).
+		SetDoneFunc(onDone).
 		Focus(func(self tview.Primitive) {
 			tui.InvertCommandInput()
 		})
@@ -298,7 +317,7 @@ func NewUI(state LineChangeState, cfg *ConfigOpts, ctx *LineChangeCtx, histChan 
 	execute := ctx.execute
 
 	tui := TUI{}
-	tui.mode = CommandPrompt
+	tui.mode = CommandMode
 	tui.state = &state
 	tui.cfg = cfg
 	tui.ctx = ctx
@@ -309,7 +328,7 @@ func NewUI(state LineChangeState, cfg *ConfigOpts, ctx *LineChangeCtx, histChan 
 	tui.app = NewRLApp()
 	tui.commandPreview = NewCommandPreview(execute)
 	tui.linePosition = NewLinePosition()
-	tui.stdoutViewer = NewStdoutView(&tui)
+	tui.stdoutViewer = NewTextViewer(&tui)
 	tui.commandInput = NewCommandInput(&tui)
 
 	ctx.tgt = tui.stdoutViewer.tview // TODO bad, weird

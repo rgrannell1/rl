@@ -247,7 +247,7 @@ func NewRLApp() *TUIApp {
 
 func NewTextViewer(tui *TUI) *TUITextViewer {
 	part := tview.NewTextView().
-		SetText("").
+		SetText(DefaultViewerText).
 		SetDynamicColors(true).
 		SetTextColor(tcell.ColorDefault)
 
@@ -262,10 +262,7 @@ func NewTextViewer(tui *TUI) *TUITextViewer {
 		}
 
 		switch event.Key() {
-		case tcell.KeyUp:
-			tui.UpdateScrollPosition()
-			return event
-		case tcell.KeyDown:
+		case tcell.KeyUp, tcell.KeyDown, tcell.KeyPgUp, tcell.KeyPgDn:
 			tui.UpdateScrollPosition()
 			return event
 		}

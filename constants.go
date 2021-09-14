@@ -16,6 +16,12 @@ const (
 	HelpMode
 )
 
+const DefaultViewerText = `
+
+Nothing To see Here
+
+`
+
 const ModesDocumentation = `
 RL supports several "modes": command-mode, view-mode, and help-mode.
 
@@ -130,8 +136,31 @@ Options:
                                            executed is a preview command
   -x <command>, --execute <command>      execute a utility command whenever user input changes; the current line will
                                            be available as the line $RL_INPUT
-  --danger-zone                          run commands with no validation; allows commands like 'rm' to execute unchecked.
+  --danger-zone                          run commands without RL attempting to find dangerous user decisions that might
+                                           cause unintented system-destruction. Rl can only spot some dangerous usage; the
+                                           responsibility to use rl carefully lies with you, with or without
+                                           --danger-zone enabled. See "Please Be Careful" section of the documentation for
+                                           more information.
   - h, --help                            show this documentation
+`
+
+const PleaseBeCareful = `
+Please Be Careful:
+  It is easy to accidentally destroy a system using shell normally; for example, 'rm -rf $FOLDER_NAME' will wipe everything
+  in your working-directory if $FOLDER_NAME is empty. Normally, you have the safeguard of at least pressing enter before a
+  command is run, giving you time to spot dangerous code. Rl runs its command _every keystroke_, so please think carefully
+  about how you use it and which command (and syntax) you provide to --execute.
+
+  My recommendations are:
+  - Use rl for listing, filtering, selecting, and searching, but never for deleting, updating, moving, or altering
+  - Use user-input ($RL_INPUT) exclusively for string arguments to other commands
+  - Do not "evaluate" RL_INPUT, especially not in shell. for example, do not invoke bash with a command-argument $RL_INPUT or call eval
+  - Always quote $RL_INPUT to avoid word-expansion; this could lead to unexpected evaluation
+  - Do not assume you are vigilant enough to ignore these warnings; people fuck up, often.
+
+  RL includes some safety-nets to avoid you running into these problems blindly, but it's not omniscience. Use rl for grep, awk, sed,
+  jq, fdfind, and other filtering operations and it will speed up your workflow; use it for rm and it'll uninstall itself (and everything
+  else on your system) eventually.
 `
 
 const DescriptionDocs = `
@@ -141,7 +170,7 @@ rl (readline) is an interactive line-editor.
 const Usage = `
 rl
 Usage:
-  rl [-x <cmd>|--execute <cmd>] [-i|--input-only] [--danger-zone]
+  rl (-x <cmd>|--execute <cmd>) [-i|--input-only] [--danger-zone]
   rl (-r|--rerun) [--danger-zone]
   rl (-h|--help)
 ` +
@@ -149,6 +178,7 @@ Usage:
 	ModesDocumentation +
 	OutputDocumentation +
 	Options +
+	PleaseBeCareful +
 	Configuration +
 	HistoryDocs +
 	EnvironmentalVariables +

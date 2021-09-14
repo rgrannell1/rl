@@ -9,18 +9,19 @@ import (
 const Usage = `
 rl
 Usage:
-  rl [-x <cmd>|--execute <cmd>] [-i|--input-only]
-  rl (-r|--rerun)
+  rl [-x <cmd>|--execute <cmd>] [-i|--input-only] [--danger-zone]
+  rl (-r|--rerun) [--danger-zone]
   rl (-h|--help)
 
 Description:
-  rl (readline) is an interactive line-editor
+  rl (readline) is an interactive line-editor.
 
 Options:
   -i, --input-only                       redundant if not running in --execute mode. by default, rl will return its last utility-command execution
                                            to standard-output. When --input-only is enabled, the entered text is returned instead of the last command's
                                             output. This is useful when the utility being executed is a preview command
   -x <command>, --execute <command>      execute a utility command whenever user input changes; the current line will be available as the line $RL_INPUT
+  --danger-zone                          run commands with no validation; allows commands like 'rm' to execute unchecked.
   - h, --help                            show this documentation
 
 Configuration:

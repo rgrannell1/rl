@@ -87,6 +87,9 @@ type TUIApp struct {
 func (tui *TUI) SetStdoutViewerFocus() {
 	tui.app.tview.SetFocus(tui.stdoutViewer.tview)
 	tui.SetMode(ViewPrompt)
+
+	// don't show command preview
+	tui.commandInput.tview.SetText("")
 }
 
 // Focus on input
@@ -163,6 +166,8 @@ func (tui *TUI) SetMode(mode PromptMode) {
 		tui.commandInput.tview.SetLabel(PROMPT_CMD)
 	} else if mode == ViewPrompt {
 		tui.commandInput.tview.SetLabel(PROMPT_VIEW)
+	} else if mode == HelpPrompt {
+		tui.commandInput.tview.SetLabel(HELP_VIEW)
 	}
 }
 
@@ -212,8 +217,14 @@ func NewStdoutView(tui *TUI) *TUIStdoutView {
 
 	part.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		key := event.Key()
+		ch := event.Rune()
 
-		if key == tcell.KeyUp {
+		if ch == '?' {
+			tui.SetMode(HelpPrompt)
+		} else if ch == '/' {
+			tui.SetInputFocus()
+			return nil
+		} else if key == tcell.KeyUp {
 			tui.UpdateScrollPosition()
 		} else if key == tcell.KeyDown {
 			tui.UpdateScrollPosition()

@@ -14,6 +14,11 @@ type LineBuffer struct {
 	done    bool   // Has a terminal character been reached?
 }
 
+func (buff *LineBuffer) SetDone() *LineBuffer {
+	buff.done = true
+	return buff
+}
+
 // Store variables that will changes as characters are received from the user
 // and commands are executed.
 type LineChangeState struct {

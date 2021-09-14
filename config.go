@@ -49,7 +49,7 @@ func CreateConfigFile(cfg *ConfigOpts) error {
 
 	if errors.Is(err, os.ErrNotExist) {
 		// -- the file does not exist, write yaml to a file
-		cfgConn, err := os.OpenFile(cfg.ConfigPath, os.O_RDWR|os.O_CREATE, 0700)
+		cfgConn, err := os.OpenFile(cfg.ConfigPath, os.O_RDWR|os.O_CREATE, USER_READ_WRITE_OCTAL)
 		if err != nil {
 			return err
 		}
@@ -73,7 +73,7 @@ func CreateConfigFile(cfg *ConfigOpts) error {
 // Create a history file, if it doesn't exist already. This may not
 // actually be used, depending on user-configuration
 func CreateHistoryFile(cfg *ConfigOpts) error {
-	histConn, err := os.OpenFile(cfg.HistoryPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0700)
+	histConn, err := os.OpenFile(cfg.HistoryPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, USER_READ_WRITE_OCTAL)
 	if err != nil {
 		return err
 	}
@@ -101,7 +101,7 @@ func InitConfig() (*ConfigOpts, error) {
 
 	// ensure XDG directories exist
 	for _, dir := range []string{xdg.ConfigHome, dataDir} {
-		err := os.MkdirAll(dir, 0700)
+		err := os.MkdirAll(dir, USER_READ_WRITE_OCTAL)
 		if err != nil {
 			return &cfg, err
 		}
@@ -123,7 +123,7 @@ func InitConfig() (*ConfigOpts, error) {
 // This will not be used if the user has history disabled
 func HistoryWriter(histChan chan *History, cfg *ConfigOpts) {
 	var historyLock = sync.Mutex{}
-	histConn, _ := os.OpenFile(cfg.HistoryPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0700)
+	histConn, _ := os.OpenFile(cfg.HistoryPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, USER_READ_WRITE_OCTAL)
 	writer := bufio.NewWriter(histConn)
 
 	defer func() {

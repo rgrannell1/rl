@@ -20,7 +20,7 @@ func OpenTTY() (*os.File, error) {
 		return nil, err
 	}
 
-	return os.NewFile(uintptr(fd), "pipe"), nil
+	return os.NewFile(uintptr(fd), "/dev/tty"), nil
 }
 
 // Detect whether input was piped into stdin; ie. if we

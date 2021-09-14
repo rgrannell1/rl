@@ -21,7 +21,8 @@ type TUI struct {
 	stdoutViewer   *TUITextViewer
 	commandInput   *TUICommandInput
 	chans          struct {
-		history chan *History
+		history  chan *History
+		exitCode chan int
 	}
 	mode PromptMode
 }
@@ -125,6 +126,8 @@ func (tui *TUI) Grid() *tview.Grid {
 
 // Start RL's TUI, and handle failures
 func (tui *TUI) Start() int {
+	defer close(tui.chans.exitCode)
+
 	grid := tui.Grid()
 
 	// start the tview application
@@ -133,7 +136,7 @@ func (tui *TUI) Start() int {
 		return 1
 	}
 
-	return 0
+	return <-tui.chans.exitCode
 }
 
 //  The preview element showing a preview of the command that will be executed
@@ -306,7 +309,7 @@ func NewCommandInput(tui *TUI) *TUICommandInput {
 	onDone := func(key tcell.Key) {
 		switch key {
 		case tcell.KeyEnter:
-			tui.state.lineBuffer.SetDone() // TODO RACE-000
+			tui.state.lineBuffer.SetDone()
 			state, _ = state.HandleUserUpdate(tui)
 		case tcell.KeyUp:
 			tui.SetMode(ViewMode)
@@ -362,6 +365,7 @@ func NewUI(state LineChangeState, cfg *ConfigOpts, ctx *LineChangeCtx, histChan 
 
 	tui.SetTheme()
 	tui.chans.history = histChan
+	tui.chans.exitCode = make(chan int)
 
 	tui.app = NewRLApp()
 	tui.commandPreview = NewCommandPreview(execute)

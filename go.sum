@@ -1,5 +1,7 @@
 github.com/adrg/xdg v0.3.4 h1:0BivHfQ0LSGQrFTaEZ0hyQLm/HAidci7m+1cT6wKKdA=
 github.com/adrg/xdg v0.3.4/go.mod h1:61xAR2VZcggl2St4O9ohF5qCKe08+JDmE4VNzPFQvOQ=
+github.com/creack/pty v1.1.15 h1:cKRCLMj3Ddm54bKSpemfQ8AtYFBhAI2MPmdys22fBdc=
+github.com/creack/pty v1.1.15/go.mod h1:MOBLtS5ELjhRRrroQr9kyvTxUAFNvYEK993ew/Vr4O4=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815 h1:bWDMxwH3px2JBh6AyO7hdCn/PkvCZXii8TGj7sbtEbQ=

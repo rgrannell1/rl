@@ -168,7 +168,7 @@ func ReadStdin() (*ringbuffer.RingBuffer, int) {
 	piped, pipeErr := StdinPiped()
 
 	if pipeErr != nil {
-		fmt.Printf("RL: could not inspect whether stdin was piped into RL")
+		fmt.Printf("RL: could not inspect whether stdin was piped into RL: %v\n", pipeErr)
 		return stdin, 1
 	}
 

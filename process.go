@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -11,25 +12,21 @@ import (
 )
 
 // Wait for started commands to complete.
-func AwaitCommand(cmd *exec.Cmd, buff *bytes.Buffer, tui *TUI) {
+func AwaitCommand(cmd *exec.Cmd, stdoutBuffer *bytes.Buffer, tui *TUI) {
 	// wait performs cleanup tasks; without this a large number of threads pile-up in this process.
-	if tui.GetDone() { // TODO RACE-000
-		// TODO race conditions?
-		tui.Stop()
-		cmd.Wait()
-	} else {
-		cmd.Wait()
 
-		//count := LineCounter(buff) // TODO this does not work reliably
-		//tui.linePosition.lineCount = count
+	cmd.Wait()
 
-		//tui.UpdateScrollPosition()
+	count := LineCounter(stdoutBuffer) // TODO this does not work reliably
+	tui.linePosition.lineCount = count
 
-		// TODO by default, scroll seems to lock to the bottom of the document. TODO may be annoying
-		// if you scrolled in view mode and tried to apply highlighting / line-number respecting filters.
-		//tui.stdoutViewer.tview.ScrollToBeginning()
-		tui.Draw()
-	}
+	tui.UpdateScrollPosition()
+
+	// TODO by default, scroll seems to lock to the bottom of the document. TODO may be annoying
+	// if you scrolled in view mode and tried to apply highlighting / line-number respecting filters.
+	tui.stdoutViewer.tview.ScrollToBeginning()
+	tui.Draw()
+
 }
 
 type ClearWriter struct {
@@ -85,29 +82,40 @@ func StartCommand(tui *TUI) (*exec.Cmd, error) {
 	// by default, go will use the current  process's environment. Merge RL_INPUT into that list and provide it to the command
 	cmd.Env = append(ctx.environment, ENVAR_NAME_RL_INPUT+"="+lineBuffer.content)
 
-	var buff bytes.Buffer
+	var stdoutBuffer bytes.Buffer
 
 	// only output the result of the last command-execution to standard-output; otherwise just show it on the tty
-	if tui.GetDone() {
-		os.Stderr.WriteString(SubstitueCommand(ctx.execute, &lineBuffer.content) + "\n")
+	done := tui.GetDone()
+
+	if done {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 	} else {
-		floop := NewClearWriter(ctx.tgt) // TODO new text writer()
+		outputView := NewClearWriter(ctx.tgt)
 
-		// TODO for now, copy stdout to another buffer so we can count newlines.
-		forkIo := io.MultiWriter(floop, &buff)
-
-		cmd.Stdout = forkIo
-		cmd.Stderr = forkIo // this could be refined
+		// show intermixed, like a terminal would, by pipeing
+		// everthing to outputview
+		cmd.Stdout = io.MultiWriter(outputView, &stdoutBuffer)
+		cmd.Stderr = outputView
 	}
 	// set the pgid so we can terminate this child-process and its descendents with one signal later, if we need to
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
-	// start the command, but don't wait for the command to complete or error-check that it started
-	err = cmd.Start()
+	if done {
+		// so something odd was happening here; before tui.Stop() was called all output was swallowed.
+		// I imagine I screwed up with os.Stdout handling here.
+		tui.Stop()
 
-	go AwaitCommand(cmd, &buff, tui)
+		fmt.Fprintf(os.Stderr, SubstitueCommand(ctx.execute, &lineBuffer.content)+"\n")
+		finalErr := cmd.Run()
+
+		return nil, finalErr
+	} else {
+		// start the command, but don't wait for the command to complete or error-check that it started
+
+		cmd.Start()
+		go AwaitCommand(cmd, &stdoutBuffer, tui)
+	}
 
 	if err != nil {
 		return nil, err
@@ -143,12 +151,29 @@ func (state *LineChangeState) StopProcess() error {
 // - cleanup any old processes running
 // - print the command-output to tview or standard output
 func (state LineChangeState) HandleUserUpdate(tui *TUI) (LineChangeState, error) {
+	// kil pgroup for command
 	state.StopProcess()
 
-	cmd, startErr := StartCommand(tui)
+	done := tui.GetDone()
+	cmd, cmdErr := StartCommand(tui)
 
-	if startErr != nil {
-		return state, startErr
+	if done {
+		go func(exitChan chan int) {
+			if exitError, ok := cmdErr.(*exec.ExitError); ok {
+				exitChan <- exitError.ExitCode()
+			} else if cmdErr != nil {
+				// it faied, we don't know why
+				exitChan <- 1
+			} else {
+				exitChan <- 0
+			}
+		}(tui.chans.exitCode)
+
+		return state, nil
+	}
+
+	if cmdErr != nil {
+		return state, cmdErr
 	} else {
 		state.cmd = cmd
 	}

@@ -13,7 +13,7 @@ import (
 // Wait for started commands to complete.
 func AwaitCommand(cmd *exec.Cmd, buff *bytes.Buffer, tui *TUI) {
 	// wait performs cleanup tasks; without this a large number of threads pile-up in this process.
-	if tui.GetDone() {
+	if tui.GetDone() { // TODO RACE-000
 		// TODO race conditions?
 		tui.Stop()
 		cmd.Wait()

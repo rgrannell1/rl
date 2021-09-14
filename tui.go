@@ -306,7 +306,7 @@ func NewCommandInput(tui *TUI) *TUICommandInput {
 	onDone := func(key tcell.Key) {
 		switch key {
 		case tcell.KeyEnter:
-			tui.state.lineBuffer.SetDone()
+			tui.state.lineBuffer.SetDone() // TODO RACE-000
 			state, _ = state.HandleUserUpdate(tui)
 		case tcell.KeyUp:
 			tui.SetMode(ViewMode)

@@ -1,5 +1,5 @@
 
-# rl [![CI](https://github.com/rgrannell1/rl/actions/workflows/ci.yaml/badge.svg)](https://github.com/rgrannell1/rl/actions/workflows/ci.yaml)
+# rl [![CI](https://github.com/rgrannell1/rl/actions/workflows/ci.yaml/badge.svg)](https://github.com/rgrannell1/rl/actions/workflows/ci.yaml) [![Go Report Card](https://goreportcard.com/badge/github.com/rgrannell1/rl)](https://goreportcard.com/report/github.com/rgrannell1/rl)
 
 rl (readline) allows users to run commands like grep interactively.
 

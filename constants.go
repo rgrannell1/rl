@@ -139,7 +139,7 @@ Options:
   --danger-zone                          run commands without RL attempting to find dangerous user decisions that might
                                            cause unintented system-destruction. Rl can only spot some dangerous usage; the
                                            responsibility to use rl carefully lies with you, with or without
-                                           --danger-zone enabled. See "Please Be Careful" section of the documentation for
+                                           danger-zone enabled. See "Please Be Careful" section of the documentation for
                                            more information.
   - h, --help                            show this documentation
 `

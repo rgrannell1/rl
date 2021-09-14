@@ -63,6 +63,8 @@ func StartCommand(tui *TUI) (*exec.Cmd, error) {
 	// run the provided command in the user's shell. We don't know for certain -c is the correct
 	// flag, this wil vary between shells. but it works for zsh and bash.
 
+	// only output the result of the last command-execution to standard-output; otherwise just show it on the tty
+	done := tui.GetDone()
 	ctx := tui.ctx
 	lineBuffer := tui.state.lineBuffer
 
@@ -83,9 +85,6 @@ func StartCommand(tui *TUI) (*exec.Cmd, error) {
 	cmd.Env = append(ctx.environment, ENVAR_NAME_RL_INPUT+"="+lineBuffer.content)
 
 	var stdoutBuffer bytes.Buffer
-
-	// only output the result of the last command-execution to standard-output; otherwise just show it on the tty
-	done := tui.GetDone()
 
 	if done {
 		cmd.Stdout = os.Stdout
@@ -151,12 +150,28 @@ func (state *LineChangeState) StopProcess() error {
 // - cleanup any old processes running
 // - print the command-output to tview or standard output
 func (state LineChangeState) HandleUserUpdate(tui *TUI) (LineChangeState, error) {
-	// kil pgroup for command
+	// no matter what we do, we don't need an old command still running; stop it
 	state.StopProcess()
 
 	done := tui.GetDone()
+
+	if done && tui.ctx.inputOnly {
+		// we don't case about final command execution; just print what
+		// the user inputted and exit.
+		tui.Stop()
+		fmt.Println(tui.state.lineBuffer.content)
+
+		go func(exitChan chan int) {
+			exitChan <- 0
+		}(tui.chans.exitCode)
+
+		return state, nil
+	}
+
+	// call the command
 	cmd, cmdErr := StartCommand(tui)
 
+	// if done, handle exit codes
 	if done {
 		go func(exitChan chan int) {
 			if exitError, ok := cmdErr.(*exec.ExitError); ok {

@@ -30,9 +30,11 @@ type TUI struct {
 // scroll-position
 func (tui *TUI) UpdateScrollPosition() {
 	stdout := tui.stdoutViewer.tview
+	stdout.Lock()
 
 	row, col := stdout.GetScrollOffset()
 	_, _, _, height := stdout.GetInnerRect()
+	stdout.Unlock()
 
 	tui.linePosition.row = row
 	tui.linePosition.col = col

@@ -20,15 +20,42 @@ func AwaitCommand(cmd *exec.Cmd, buff *bytes.Buffer, tui *TUI) {
 	} else {
 		cmd.Wait()
 
-		count := LineCounter(buff) // TODO this does not work reliably
-		tui.linePosition.lineCount = count
+		//count := LineCounter(buff) // TODO this does not work reliably
+		//tui.linePosition.lineCount = count
 
-		tui.UpdateScrollPosition()
+		//tui.UpdateScrollPosition()
 
 		// TODO by default, scroll seems to lock to the bottom of the document. TODO may be annoying
 		// if you scrolled in view mode and tried to apply highlighting / line-number respecting filters.
-		tui.stdoutViewer.tview.ScrollToBeginning()
+		//tui.stdoutViewer.tview.ScrollToBeginning()
 		tui.Draw()
+	}
+}
+
+type ClearWriter struct {
+	view    *tview.TextView
+	writer  io.Writer
+	cleared bool
+}
+
+// Defer to writer, but clear text-view on first write just-before
+// new output is written (minimising flickering in output)
+func (tgt *ClearWriter) Write(data []byte) (n int, err error) {
+	if !tgt.cleared {
+		tgt.view.Lock()
+		tgt.view.Clear()
+		tgt.cleared = true
+		tgt.view.Unlock()
+	}
+
+	return tgt.writer.Write(data)
+}
+
+func NewClearWriter(view *tview.TextView) *ClearWriter {
+	return &ClearWriter{
+		view,
+		tview.ANSIWriter(view),
+		false,
 	}
 }
 
@@ -59,8 +86,6 @@ func StartCommand(tui *TUI) (*exec.Cmd, error) {
 	cmd.Env = append(ctx.environment, ENVAR_NAME_RL_INPUT+"="+lineBuffer.content)
 
 	var buff bytes.Buffer
-	// TODO for now, copy stdout to another buffer so we can count newlines.
-	forkIo := io.MultiWriter(ctx, &buff)
 
 	// only output the result of the last command-execution to standard-output; otherwise just show it on the tty
 	if tui.GetDone() {
@@ -68,7 +93,10 @@ func StartCommand(tui *TUI) (*exec.Cmd, error) {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 	} else {
-		VERY_NASTY_GLOBAL_STATE = true
+		floop := NewClearWriter(ctx.tgt) // TODO new text writer()
+
+		// TODO for now, copy stdout to another buffer so we can count newlines.
+		forkIo := io.MultiWriter(floop, &buff)
 
 		cmd.Stdout = forkIo
 		cmd.Stderr = forkIo // this could be refined
@@ -86,22 +114,6 @@ func StartCommand(tui *TUI) (*exec.Cmd, error) {
 	} else {
 		return cmd, nil
 	}
-}
-
-var VERY_NASTY_GLOBAL_STATE = true
-
-// Implement IO.Writer for Ctx so we can clear _just before_ the new command text is received,
-// so we don't see flashes and latency
-func (ctx *LineChangeCtx) Write(data []byte) (n int, err error) {
-	// this will panic if a lock isn't set!
-	if VERY_NASTY_GLOBAL_STATE {
-		ctx.tgt.Lock()
-		ctx.tgt.Clear()
-		VERY_NASTY_GLOBAL_STATE = false
-		ctx.tgt.Unlock()
-	}
-
-	return tview.ANSIWriter(ctx.tgt).Write(data)
 }
 
 // Stop a running execute process by looking up the state's cmd variable,

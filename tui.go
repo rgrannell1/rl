@@ -93,11 +93,15 @@ func (tui *TUI) SetStdoutViewerFocus() {
 
 	// don't show command preview
 	tui.commandInput.tview.SetText("")
+
+	// show a blue label, to make it obvious we switched mode
+	tui.commandInput.tview.SetLabelColor(tcell.ColorBlue)
 }
 
 // Focus on input
 func (tui *TUI) SetInputFocus() {
 	tui.app.tview.SetFocus(tui.commandInput.tview)
+	tui.commandInput.tview.SetLabelColor(tcell.ColorRed)
 }
 
 // Store RL's TUI
@@ -162,15 +166,34 @@ type TUICommandInput struct {
 
 // Set prompt
 func (tui *TUI) SetMode(mode PromptMode) {
+	currMode := tui.mode
 	tui.mode = mode
 
 	if mode == CommandMode {
+		// CommandMode switches
 		tui.commandInput.tview.SetLabel(PROMPT_CMD)
 		tui.SetInputFocus()
 	} else if mode == ViewMode {
+		// Viewmode switches
+
 		tui.commandInput.tview.SetLabel(PROMPT_VIEW)
 		tui.SetStdoutViewerFocus()
+
+		if currMode == HelpMode {
+			// update the line-count in the buffer after switching
+			tui.UpdateScrollPosition()
+		}
 	} else if mode == HelpMode {
+		// Helpmode switches
+
+		// TODO await lock to prevent clash with slow-writing command. Or just kill command
+		tui.state.StopProcess()
+
+		// TODO update line-count
+
+		tui.commandPreview.tview.SetText("rl")
+		tui.stdoutViewer.tview.SetText(HelpDocumentation)
+		tui.commandInput.tview.SetLabelColor(tcell.ColorGreen)
 		tui.commandInput.tview.SetLabel(HELP_VIEW)
 	}
 }
@@ -240,9 +263,19 @@ func NewTextViewer(tui *TUI) *TUITextViewer {
 		case tcell.KeyDown:
 			tui.UpdateScrollPosition()
 			return event
-		case tcell.KeyEsc:
-			tui.Stop()
-			return nil
+		}
+
+		if event.Key() == tcell.KeyEscape || event.Rune() == 'q' {
+			if tui.mode == HelpMode {
+				// quit back to view-mode
+				tui.SetMode(ViewMode)
+				// update the line-count
+				tui.UpdateScrollPosition()
+				return nil
+			} else {
+				tui.Stop()
+				return nil
+			}
 		}
 
 		return event
@@ -284,6 +317,8 @@ func NewCommandInput(tui *TUI) *TUICommandInput {
 		}
 	}
 
+	// TODO implement ctrl+left, ctrl+right
+
 	onChange := func(text string) {
 		state.lineBuffer.content = text
 		state, _ = state.HandleUserUpdate(tui)
@@ -303,6 +338,7 @@ func NewCommandInput(tui *TUI) *TUICommandInput {
 	commandInput := tview.NewInputField()
 
 	commandInput.
+		SetLabelColor(tcell.ColorRed).
 		SetChangedFunc(onChange).
 		SetLabel(PROMPT_CMD).
 		SetDoneFunc(onDone).

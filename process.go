@@ -23,6 +23,8 @@ func AwaitCommand(cmd *exec.Cmd, buff *bytes.Buffer, tui *TUI) {
 		count := LineCounter(buff) // TODO this does not work reliably
 		tui.linePosition.lineCount = count
 
+		tui.UpdateScrollPosition()
+
 		// TODO by default, scroll seems to lock to the bottom of the document. TODO may be annoying
 		// if you scrolled in view mode and tried to apply highlighting / line-number respecting filters.
 		tui.stdoutViewer.tview.ScrollToBeginning()

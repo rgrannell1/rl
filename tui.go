@@ -23,6 +23,7 @@ type TUI struct {
 	chans          struct {
 		history chan *History
 	}
+	mode PromptMode
 }
 
 // Update the line-position element based on the current
@@ -85,13 +86,13 @@ type TUIApp struct {
 // Focus on stdout viewer
 func (tui *TUI) SetStdoutViewerFocus() {
 	tui.app.tview.SetFocus(tui.stdoutViewer.tview)
-	tui.SetPrompt(PagePrompt)
+	tui.SetMode(ViewPrompt)
 }
 
 // Focus on input
 func (tui *TUI) SetInputFocus() {
 	tui.app.tview.SetFocus(tui.commandInput.tview)
-	tui.SetPrompt(CommandPrompt)
+	tui.SetMode(CommandPrompt)
 }
 
 // Store RL's TUI
@@ -154,10 +155,13 @@ type TUICommandInput struct {
 	tview *tview.InputField
 }
 
-func (tui *TUI) SetPrompt(mode PromptMode) {
+// Set prompt
+func (tui *TUI) SetMode(mode PromptMode) {
+	tui.mode = mode
+
 	if mode == CommandPrompt {
 		tui.commandInput.tview.SetLabel(PROMPT_CMD)
-	} else if mode == PagePrompt {
+	} else if mode == ViewPrompt {
 		tui.commandInput.tview.SetLabel(PROMPT_VIEW)
 	}
 }
@@ -213,6 +217,8 @@ func NewStdoutView(tui *TUI) *TUIStdoutView {
 			tui.UpdateScrollPosition()
 		} else if key == tcell.KeyDown {
 			tui.UpdateScrollPosition()
+		} else if key == tcell.KeyEsc {
+			tui.Stop()
 		}
 
 		return event
@@ -261,6 +267,9 @@ func NewCommandInput(tui *TUI) *TUICommandInput {
 			} else if key == tcell.KeyDown {
 				tui.SetStdoutViewerFocus()
 				tui.UpdateScrollPosition()
+			} else if key == tcell.KeyEsc {
+				tui.SetStdoutViewerFocus()
+				tui.SetMode(ViewPrompt)
 			} else {
 				tui.Stop()
 			}
@@ -278,6 +287,7 @@ func NewUI(state LineChangeState, cfg *ConfigOpts, ctx *LineChangeCtx, histChan 
 	execute := ctx.execute
 
 	tui := TUI{}
+	tui.mode = CommandPrompt
 	tui.state = &state
 	tui.cfg = cfg
 	tui.ctx = ctx

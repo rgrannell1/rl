@@ -56,5 +56,5 @@ type PromptMode int
 
 const (
 	CommandPrompt PromptMode = iota
-	PagePrompt
+	ViewPrompt
 )

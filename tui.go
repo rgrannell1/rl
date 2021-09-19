@@ -24,7 +24,8 @@ type TUI struct {
 		history  chan *History
 		exitCode chan int
 	}
-	mode PromptMode
+	mode      PromptMode
+	textAlign int
 }
 
 // Update the line-position element based on the current
@@ -249,6 +250,7 @@ func NewTextViewer(tui *TUI) *TUITextViewer {
 	part := tview.NewTextView().
 		SetText(DefaultViewerText).
 		SetDynamicColors(true).
+		SetTextAlign(tview.AlignCenter).
 		SetTextColor(tcell.ColorDefault)
 
 	onInput := func(event *tcell.EventKey) *tcell.EventKey {
@@ -319,9 +321,15 @@ func NewCommandInput(tui *TUI) *TUICommandInput {
 		}
 	}
 
-	// TODO implement ctrl+left, ctrl+right
+	run := false
 
+	// TODO implement ctrl+left, ctrl+right
 	onChange := func(text string) {
+		if !run {
+			tui.stdoutViewer.tview.SetTextAlign(tview.AlignLeft)
+			run = true
+		}
+
 		state.lineBuffer.content = text
 		state, _ = state.HandleUserUpdate(tui)
 
@@ -359,6 +367,7 @@ func NewUI(state LineChangeState, cfg *ConfigOpts, ctx *LineChangeCtx, histChan 
 	tui.state = &state
 	tui.cfg = cfg
 	tui.ctx = ctx
+	tui.textAlign = tview.AlignCenter
 
 	tui.SetTheme()
 	tui.chans.history = histChan

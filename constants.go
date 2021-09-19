@@ -17,9 +17,13 @@ const (
 )
 
 const DefaultViewerText = `
+RL - run commands on key-stroke
 
-Nothing To see Here
+Type to replace "$RL_INPUT" with whatever you've typed.
+Press ESCAPE to open view-mode, twice to exit
+Press ENTER to exit with output
 
+Please read RL's "Please Be Careful" documentation
 `
 
 const ModesDocumentation = `
@@ -114,8 +118,7 @@ const EnvironmentalVariables = `
 Environment Variables:
   $SHELL       when run with -x or --execute, rl starts a command in the user's default-shell.
   $RL_INPUT    when run with -x or --execute, this variable contains the user-input text. Subcommands
-  must use this environmental variable to access
-                user-input.
+  must use this environmental variable to access user-input.
 `
 
 const Configuration = `
@@ -133,7 +136,7 @@ Options:
                                             rl will return its last utility-command execution to standard-output.
                                             When --input-only is enabled, the entered text is returned instead of
                                             the last command's output. This is useful when the utility being
-                                           executed is a preview command
+                                            executed is a preview command
   -x <command>, --execute <command>      execute a utility command whenever user input changes; the current line will
                                            be available as the line $RL_INPUT
   --danger-zone                          run commands without RL attempting to find dangerous user decisions that might
@@ -199,4 +202,5 @@ https://github.com/rgrannell1/rl/issues
 	OutputDocumentation +
 	Configuration +
 	HistoryDocs +
-	EnvironmentalVariables
+	EnvironmentalVariables +
+	PleaseBeCareful

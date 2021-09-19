@@ -127,13 +127,18 @@ func (tui *TUI) Stop() {
 // (p tview.Primitive, row int, column int, rowSpan int, colSpan int, minGridHeight int, minGridWidth int, focus bool) *tview.Grid
 func (tui *TUI) Grid() *tview.Grid {
 	return tview.NewGrid().
-		SetRows(2, 0, 1, 1).
+		SetRows(2, 0, 1, 1, 1).
 		SetColumns(30, 0, 30, 30).SetBorders(false).
+		// row zero
 		AddItem(tui.commandPreview.tview, 0, 0, 1, 2, 0, 0, false).
 		AddItem(tui.linePosition.tview, 0, 2, 1, 1, 0, 0, false).
+		// row one+
 		AddItem(tui.stdoutViewer.tview, 1, 0, 1, 3, 0, 0, false).
-		AddItem(tui.helpBar.tview, 2, 0, 1, 3, 1, 0, false).
-		AddItem(tui.commandInput.tview, 3, 0, 1, 3, 1, 0, true)
+		AddItem(tview.NewTextView(), 2, 0, 1, 3, 1, 0, false).
+		// row three
+		AddItem(tui.helpBar.tview, 3, 0, 1, 3, 1, 0, false).
+		// row four
+		AddItem(tui.commandInput.tview, 4, 0, 1, 3, 1, 0, true)
 }
 
 // Start RL's TUI, and handle failures

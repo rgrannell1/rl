@@ -1,9 +1,9 @@
 
 # rl [![CI](https://github.com/rgrannell1/rl/actions/workflows/ci.yaml/badge.svg)](https://github.com/rgrannell1/rl/actions/workflows/ci.yaml) [![Go Report Card](https://goreportcard.com/badge/github.com/rgrannell1/rl)](https://goreportcard.com/report/github.com/rgrannell1/rl)
 
-rl (readline) allows users to run commands like grep interactively.
+RL runs commands on key-stroke. Pre-release
 
-[![asciicast](https://asciinema.org/a/SA2zV7ENzE55MzxSJSQlgikHu.svg)](https://asciinema.org/a/SA2zV7ENzE55MzxSJSQlgikHu)
+[![asciicast](https://asciinema.org/a/jMkJl36C46dvv12lsMuZwWd0L.svg)](https://asciinema.org/a/jMkJl36C46dvv12lsMuZwWd0L)
 
 For example, `rl` can interactively search files for a keyword in your notes folder, then open your final matches in VSCode.
 

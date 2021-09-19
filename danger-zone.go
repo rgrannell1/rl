@@ -1,5 +1,10 @@
 package main
 
+import (
+	"fmt"
+	"strings"
+)
+
 /*
 Shell parse-tree
 
@@ -15,6 +20,11 @@ Shell parse-tree
 Todo
 */
 func AuditCommand(command *string) int {
+	if strings.Trim(*command, "") == "$RL_INPUT" {
+		fmt.Printf("RL: do not use $RL_INPUT in unquoted format; it's dangerous.\n")
+
+		return 1
+	}
 
 	return 0
 }

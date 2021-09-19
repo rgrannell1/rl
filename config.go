@@ -138,7 +138,7 @@ func HistoryWriter(histChan chan *History, cfg *ConfigOpts) {
 	for {
 		hist := <-histChan
 		hist.StartTime = startTime
-		entry, _ := json.MarshalIndent(hist, "", " ")
+		entry, _ := json.Marshal(hist)
 
 		historyLock.Lock()
 		writer.WriteString(string(entry) + "\n")
@@ -215,10 +215,10 @@ func ReadShell() (string, int) {
 func RLState(opts *docopt.Opts) (LineChangeState, LineChangeCtx, int) {
 	execute, execErr := opts.String("--execute")
 
-	//	code := AuditCommand(&execute)
-	//	if code != 0 {
-	//		return LineChangeState{}, LineChangeCtx{}, code
-	//	}
+	code := AuditCommand(&execute)
+	if code != 0 {
+		return LineChangeState{}, LineChangeCtx{}, code
+	}
 
 	if execErr != nil {
 		execute = ""

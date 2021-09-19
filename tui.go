@@ -20,12 +20,14 @@ type TUI struct {
 	linePosition   *TUILinePosition
 	stdoutViewer   *TUITextViewer
 	commandInput   *TUICommandInput
+	helpBar        *TUIHelpBar
 	chans          struct {
 		history  chan *History
 		exitCode chan int
 	}
 	mode      PromptMode
 	textAlign int
+	history   HistoryCursor
 }
 
 // Update the line-position element based on the current
@@ -108,6 +110,14 @@ func (tui *TUI) SetInputFocus() {
 	tui.commandInput.tview.SetLabelColor(tcell.ColorRed)
 }
 
+func (tui *TUI) ScrollHistoryBack() {
+
+}
+
+func (tui *TUI) ScrollHistoryForward() {
+
+}
+
 // Store RL's TUI
 func (tui *TUI) Stop() {
 	tui.app.tview.Stop() // exits on arrow
@@ -117,12 +127,13 @@ func (tui *TUI) Stop() {
 // (p tview.Primitive, row int, column int, rowSpan int, colSpan int, minGridHeight int, minGridWidth int, focus bool) *tview.Grid
 func (tui *TUI) Grid() *tview.Grid {
 	return tview.NewGrid().
-		SetRows(2, 0, 2).
-		SetColumns(30, 0, 30).SetBorders(false).
+		SetRows(2, 0, 1, 1).
+		SetColumns(30, 0, 30, 30).SetBorders(false).
 		AddItem(tui.commandPreview.tview, 0, 0, 1, 2, 0, 0, false).
 		AddItem(tui.linePosition.tview, 0, 2, 1, 1, 0, 0, false).
 		AddItem(tui.stdoutViewer.tview, 1, 0, 1, 3, 0, 0, false).
-		AddItem(tui.commandInput.tview, 2, 0, 1, 3, 1, 0, true)
+		AddItem(tui.helpBar.tview, 2, 0, 1, 3, 1, 0, false).
+		AddItem(tui.commandInput.tview, 3, 0, 1, 3, 1, 0, true)
 }
 
 // Start RL's TUI, and handle failures
@@ -170,6 +181,10 @@ type TUICommandInput struct {
 	tview *tview.InputField
 }
 
+type TUIHelpBar struct {
+	tview *tview.TextView
+}
+
 // Set prompt
 func (tui *TUI) SetMode(mode PromptMode) {
 	currMode := tui.mode
@@ -177,11 +192,13 @@ func (tui *TUI) SetMode(mode PromptMode) {
 
 	if mode == CommandMode {
 		// CommandMode switches
+		tui.helpBar.tview.SetText(HELP_CMD)
 		tui.commandInput.tview.SetLabel(PROMPT_CMD)
 		tui.SetInputFocus()
 	} else if mode == ViewMode {
 		// Viewmode switches
 
+		tui.helpBar.tview.SetText(HELP_VIEW)
 		tui.commandInput.tview.SetLabel(PROMPT_VIEW)
 		tui.SetStdoutViewerFocus()
 
@@ -197,10 +214,11 @@ func (tui *TUI) SetMode(mode PromptMode) {
 
 		// TODO update line-count
 
+		tui.helpBar.tview.SetText(HELP_HELP)
 		tui.commandPreview.tview.SetText("rl")
 		tui.stdoutViewer.tview.SetText(HelpDocumentation)
 		tui.commandInput.tview.SetLabelColor(tcell.ColorGreen)
-		tui.commandInput.tview.SetLabel(HELP_VIEW)
+		tui.commandInput.tview.SetLabel(PROMPT_HELP)
 	}
 }
 
@@ -312,11 +330,14 @@ func NewCommandInput(tui *TUI) *TUICommandInput {
 			tui.state.lineBuffer.SetDone()
 			state, _ = state.HandleUserUpdate(tui)
 		case tcell.KeyUp:
-			tui.SetMode(ViewMode)
-			tui.UpdateScrollPosition()
+			tui.ScrollHistoryBack()
+			//tui.SetMode(ViewMode)
+			//tui.UpdateScrollPosition()
 		case tcell.KeyDown:
-			tui.SetMode(ViewMode)
-			tui.UpdateScrollPosition()
+			tui.ScrollHistoryForward()
+
+			//tui.SetMode(ViewMode)
+			//tui.UpdateScrollPosition()
 		case tcell.KeyEscape:
 			tui.SetMode(ViewMode)
 		}
@@ -360,6 +381,14 @@ func NewCommandInput(tui *TUI) *TUICommandInput {
 	return &TUICommandInput{commandInput}
 }
 
+func NewHelpBar(tui *TUI) *TUIHelpBar {
+	view := tview.NewTextView().
+		SetDynamicColors(true).
+		SetText(HELP_CMD)
+
+	return &TUIHelpBar{view}
+}
+
 func NewUI(state LineChangeState, cfg *ConfigOpts, ctx *LineChangeCtx, histChan chan *History) *TUI {
 	execute := ctx.execute
 
@@ -379,6 +408,7 @@ func NewUI(state LineChangeState, cfg *ConfigOpts, ctx *LineChangeCtx, histChan 
 	tui.linePosition = NewLinePosition()
 	tui.stdoutViewer = NewTextViewer(&tui)
 	tui.commandInput = NewCommandInput(&tui)
+	tui.helpBar = NewHelpBar(&tui)
 
 	tui.InvertCommandInput()
 

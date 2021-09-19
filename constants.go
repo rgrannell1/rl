@@ -1,12 +1,9 @@
 package main
 
-const ENVAR_NAME_RL_INPUT = "RL_INPUT"                                               // The environmental-variable name provided to the subcommand passed to execute
-const STDIN_BUFFER_SIZE = 100_000_000                                                // The size of the stdin buffer, in bytes
-const PROMPT_CMD = "Command | > "                                                    // The RL prompt for viewing text
-const PROMPT_VIEW = "View    | (Esc or q to exit, '/' to run command, '?' for help)" // The RL prompt for executing a command
-const HELP_VIEW = "Help    | (Esc or q to exit, '/' to run command)"                 // The RL prompt for showing help
-const USER_WRITE_OCTAL = 00200                                                       // User write file permissions for a file
-const USER_READ_WRITE_OCTAL = 0600                                                   // User read-write file permissions for a file
+const ENVAR_NAME_RL_INPUT = "RL_INPUT" // The environmental-variable name provided to the subcommand passed to execute
+const STDIN_BUFFER_SIZE = 100_000_000  // The size of the stdin buffer, in bytes
+const USER_WRITE_OCTAL = 00200         // User write file permissions for a file
+const USER_READ_WRITE_OCTAL = 0600     // User read-write file permissions for a file
 
 type PromptMode int
 
@@ -16,12 +13,20 @@ const (
 	HelpMode
 )
 
+const PROMPT_CMD = "Command | > " // The RL prompt for viewing text
+const PROMPT_VIEW = "View    | "  // The RL prompt for executing a command
+const PROMPT_HELP = "Help    | "  // The RL prompt for showing help
+
+const HELP_CMD = "Press [green]ESCAPE[-:-:-] to switch to view mode, [green]ENTER[-:-:-] to exit with command-output"
+const HELP_VIEW = "Press [green]ESCAPE[-:-:-] or  [green]q[-:-:-] to quit, [green]/[-:-:-] to switch to edit input, [green]?[-:-:-] for help"
+const HELP_HELP = "Press [green]ESCAPE[-:-:-] or  [green]q[-:-:-] to quit, [green]/[-:-:-] to switch to edit input"
+
 const DefaultViewerText = `
 RL - run commands on key-stroke
 
 Type to replace "$RL_INPUT" with whatever you've typed.
-Press ESCAPE to open view-mode, twice to exit
-Press ENTER to exit with output
+Press [green]ESCAPE[reset] to open view-mode, twice to exit
+Press [green]ENTER[reset] to exit with output
 
 Please read RL's "Please Be Careful" documentation
 `

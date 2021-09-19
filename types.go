@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bufio"
+	"os"
 	"os/exec"
 	"time"
 
@@ -53,4 +55,29 @@ type History struct {
 	Template  string    `json:"template"`   // The 'template' the user provided to -x
 	Time      time.Time `json:"time"`       // The time the command was started, approximately
 	StartTime time.Time `json:"start_time"` // The start-time of the program, approximately. Can be used as an ID.
+}
+
+type HistoryCursor struct {
+	historyPath string
+	index       int
+	buffer      ringbuffer.RingBuffer
+}
+
+func (curs *HistoryCursor) GetCount() int {
+	conn, _ := os.Open(curs.historyPath)
+
+	// Create new Scanner.
+	scanner := bufio.NewScanner(conn)
+
+	count := 0
+	for scanner.Scan() {
+		scanner.Text()
+		count += 1
+	}
+
+	return count
+}
+
+func (curs *HistoryCursor) GetHistory(index int) History {
+	return History{}
 }

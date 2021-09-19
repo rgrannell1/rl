@@ -4,7 +4,6 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/rivo/tview"
 	"github.com/smallnest/ringbuffer"
 )
 
@@ -32,7 +31,6 @@ type LineChangeCtx struct {
 	inputOnly   bool                   // should we only return the user's input (e.g lineBuffer) instead of the final command execution, if we're running in execute mode?
 	execute     *string                // a string to execute in a user's shell
 	environment []string               // an array of this processes environmental variables
-	tgt         *tview.TextView        // where to pipe output
 	stdin       *ringbuffer.RingBuffer // a buffer containing as much stdin as we are willing to store
 }
 

@@ -253,7 +253,6 @@ func RLState(opts *docopt.Opts) (LineChangeState, LineChangeCtx, int) {
 		inputOnly,
 		&execute,
 		os.Environ(),
-		nil,
 		stdin,
 	}
 

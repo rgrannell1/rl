@@ -278,6 +278,7 @@ func NewTextViewer(tui *TUI) *TUITextViewer {
 				return nil
 			} else {
 				tui.Stop()
+				tui.chans.exitCode <- 0
 				return nil
 			}
 		}
@@ -378,8 +379,6 @@ func NewUI(state LineChangeState, cfg *ConfigOpts, ctx *LineChangeCtx, histChan 
 	tui.linePosition = NewLinePosition()
 	tui.stdoutViewer = NewTextViewer(&tui)
 	tui.commandInput = NewCommandInput(&tui)
-
-	ctx.tgt = tui.stdoutViewer.tview // TODO bad, weird
 
 	tui.InvertCommandInput()
 

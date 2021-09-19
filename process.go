@@ -90,7 +90,7 @@ func StartCommand(tui *TUI) (*exec.Cmd, error) {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 	} else {
-		outputView := NewClearWriter(ctx.tgt)
+		outputView := NewClearWriter(tui.stdoutViewer.tview)
 
 		// show intermixed, like a terminal would, by pipeing
 		// everthing to outputview

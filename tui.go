@@ -372,7 +372,7 @@ func NewUI(state LineChangeState, cfg *ConfigOpts, ctx *LineChangeCtx, histChan 
 
 	tui.SetTheme()
 	tui.chans.history = histChan
-	tui.chans.exitCode = make(chan int)
+	tui.chans.exitCode = make(chan int, 100)
 
 	tui.app = NewRLApp()
 	tui.commandPreview = NewCommandPreview(execute)

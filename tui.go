@@ -57,6 +57,15 @@ func (tui *TUI) UpdateScrollPosition() {
 		percentStr = ""
 	} else {
 		ratio := float64(endRow) / float64(lineCount)
+
+		if ratio < 0 {
+			ratio = 0
+		}
+
+		if ratio > 100 {
+			ratio = 100
+		}
+
 		percentStr = fmt.Sprint(math.Round(1_000.0*ratio)/10.0) + "%"
 	}
 

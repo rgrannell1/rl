@@ -36,8 +36,8 @@ RL supports several "modes": command-mode, view-mode, and help-mode.
 
 Command-Mode:
 
-  Run commands on key-stroke. Takes the command you provided with
-  --execute, -x, and substitutes $RL_INPUT with whatever you type in. Output
+  Run commands on key-stroke. Takes the command you provided as an argument, and substitutes
+  $RL_INPUT with whatever you type in. Output
   (stdout, stderr) is shown on-screen. Press Enter to run the command, output to
   (stdout, stderr), and exit RL.
 
@@ -121,8 +121,8 @@ History
 
 const EnvironmentalVariables = `
 Environment Variables:
-  $SHELL       when run with -x or --execute, rl starts a command in the user's default-shell.
-  $RL_INPUT    when run with -x or --execute, this variable contains the user-input text. Subcommands
+  $SHELL       rl starts a command in the user's default-shell.
+  $RL_INPUT    this variable contains the user-input text. Subcommands
   must use this environmental variable to access user-input.
 `
 
@@ -136,14 +136,16 @@ Configuration:
 `
 
 const Options = `
+Arguments:
+  <cmd>                                  execute a utility command whenever user input changes; the current line will
+                                         be available as the line $RL_INPUT
+
 Options:
-  -i, --input-only                       redundant if not running in --execute mode. by default,
+  -i, --input-only                       by default,
                                             rl will return its last utility-command execution to standard-output.
                                             When --input-only is enabled, the entered text is returned instead of
                                             the last command's output. This is useful when the utility being
                                             executed is a preview command
-  -x <command>, --execute <command>      execute a utility command whenever user input changes; the current line will
-                                           be available as the line $RL_INPUT
   --danger-zone                          run commands without RL attempting to find dangerous user decisions that might
                                            cause unintented system-destruction. Rl can only spot some dangerous usage; the
                                            responsibility to use rl carefully lies with you, with or without
@@ -157,7 +159,7 @@ Please Be Careful:
   It is easy to accidentally destroy a system using shell normally; for example, 'rm -rf $FOLDER_NAME' will wipe everything
   in your working-directory if $FOLDER_NAME is empty. Normally, you have the safeguard of at least pressing enter before a
   command is run, giving you time to spot dangerous code. Rl runs its command _every keystroke_, so please think carefully
-  about how you use it and which command (and syntax) you provide to --execute.
+  about how you use it and which command (and syntax) you provide to <cmd>.
 
   My recommendations are:
   - Use rl for listing, filtering, selecting, and searching, but never for deleting, updating, moving, or altering
@@ -175,13 +177,15 @@ const DescriptionDocs = `
 rl (readline) is an interactive line-editor.
 `
 
-const Usage = `
+const UsageLine = `
 rl
 Usage:
-  rl (-x <cmd>|--execute <cmd>) [-i|--input-only] [--danger-zone]
+  rl [-i|--input-only] [--danger-zone] <cmd>
   rl (-r|--rerun) [--danger-zone]
   rl (-h|--help)
-` +
+`
+
+const Usage = UsageLine +
 	DescriptionDocs +
 	ModesDocumentation +
 	OutputDocumentation +

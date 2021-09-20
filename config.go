@@ -213,7 +213,7 @@ func ReadShell() (string, int) {
 }
 
 func RLState(opts *docopt.Opts) (LineChangeState, LineChangeCtx, int) {
-	execute, execErr := opts.String("--execute")
+	execute, execErr := opts.String("<cmd>")
 
 	code := AuditCommand(&execute)
 	if code != 0 {

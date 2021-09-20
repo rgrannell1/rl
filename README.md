@@ -1,7 +1,7 @@
 
 # rl [![CI](https://github.com/rgrannell1/rl/actions/workflows/ci.yaml/badge.svg)](https://github.com/rgrannell1/rl/actions/workflows/ci.yaml) [![Go Report Card](https://goreportcard.com/badge/github.com/rgrannell1/rl)](https://goreportcard.com/report/github.com/rgrannell1/rl)
 
-RL runs commands on key-stroke. Pre-release
+RL runs commands on key-stroke.
 
 [![asciicast](https://asciinema.org/a/jMkJl36C46dvv12lsMuZwWd0L.svg)](https://asciinema.org/a/jMkJl36C46dvv12lsMuZwWd0L)
 

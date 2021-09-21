@@ -121,9 +121,10 @@ History
 
 const EnvironmentalVariables = `
 Environment Variables:
-  $SHELL       rl starts a command in the user's default-shell.
-  $RL_INPUT    this variable contains the user-input text. Subcommands
+  $SHELL           rl starts a command in the user's default-shell.
+  $RL_INPUT        this variable conwtains the user-input text. Subcommands
   must use this environmental variable to access user-input.
+  <env_vars...>    additional variables provided to rl
 `
 
 const Configuration = `
@@ -138,7 +139,9 @@ Configuration:
 const Options = `
 Arguments:
   <env_vars>...                          a list of environmental-variable bindings to provide in addition to $RL_INPUT,
-                                           of the form "FOO=BAR". This can make it easier to wrap "rl" in an alias or function wrapper.
+                                           of the form "FOO=BAR". This can make it easier to wrap "rl" in an alias or function
+                                           wrapper. For example, you could provide "folder=$1" from a bash-function and the
+                                           variable "$folder" would be available to the supplied command to search or list.
   <cmd>                                  execute a utility command whenever user input changes; the current line will
                                          be available as the line $RL_INPUT
 

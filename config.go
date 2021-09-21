@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -238,7 +239,35 @@ func RLState(opts *docopt.Opts) (LineChangeState, LineChangeCtx, int) {
 		os.Exit(1)
 	}
 
+	splitEnvVars := [][]string{}
+
+	// docopt is unmaintained
+	envVarsIface, present := (*opts)["<env_vars>"]
+
+	if present {
+		envVars, castOk := envVarsIface.([]string)
+
+		if !castOk {
+			fmt.Println("RL: failed to read <env_vars> option.")
+			os.Exit(1)
+		}
+
+		splitEnvVars = make([][]string, len(envVars))
+
+		for idx, pair := range envVars {
+			split := strings.SplitN(pair, "=", 2)
+
+			if len(split) != 2 {
+				fmt.Printf("RL: failed to split environment-variable '%v' provided to rl\n", pair)
+				os.Exit(1)
+			}
+
+			splitEnvVars[idx] = split
+		}
+	}
+
 	shell, code := ReadShell()
+
 	if code != 0 {
 		return LineChangeState{}, LineChangeCtx{}, code
 	}
@@ -253,6 +282,7 @@ func RLState(opts *docopt.Opts) (LineChangeState, LineChangeCtx, int) {
 		inputOnly,
 		&execute,
 		os.Environ(),
+		splitEnvVars,
 		stdin,
 	}
 

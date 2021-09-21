@@ -106,9 +106,6 @@ type TUIApp struct {
 func (tui *TUI) SetStdoutViewerFocus() {
 	tui.app.tview.SetFocus(tui.stdoutViewer.tview)
 
-	// don't show command preview
-	tui.commandInput.tview.SetText("")
-
 	// show a blue label, to make it obvious we switched mode
 	tui.commandInput.tview.SetLabelColor(tcell.ColorBlue)
 }
@@ -171,8 +168,18 @@ type TUICommandPreview struct {
 }
 
 // Update the UI header based on user input
-func (prev *TUICommandPreview) UpdateText(command string, buffer *LineBuffer) {
+func (prev *TUICommandPreview) UpdateText(command string, buffer *LineBuffer, envVars *[][]string) {
+
 	summary := strings.ReplaceAll(command, "$"+ENVAR_NAME_RL_INPUT, "[red]"+buffer.content+"[default]")
+
+	for _, pair := range *envVars {
+		varName := "$" + pair[0]
+		// it might be nice to show env-vars, but these can contain passwords. This is a saner default.
+		highlight := "[blue]" + varName + "[default]"
+
+		summary = strings.ReplaceAll(summary, varName, highlight)
+	}
+
 	prev.tview.SetText("rl: " + summary)
 }
 
@@ -378,7 +385,7 @@ func NewCommandInput(tui *TUI) *TUICommandInput {
 			}
 		}
 
-		tui.commandPreview.UpdateText(*execute, state.lineBuffer)
+		tui.commandPreview.UpdateText(*execute, state.lineBuffer, &ctx.envVars)
 	}
 
 	commandInput := tview.NewInputField()

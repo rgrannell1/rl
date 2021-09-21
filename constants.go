@@ -137,6 +137,8 @@ Configuration:
 
 const Options = `
 Arguments:
+  <env_vars>...                          a list of environmental-variable bindings to provide in addition to $RL_INPUT,
+                                           of the form "FOO=BAR". This can make it easier to wrap "rl" in an alias or function wrapper.
   <cmd>                                  execute a utility command whenever user input changes; the current line will
                                          be available as the line $RL_INPUT
 
@@ -180,7 +182,7 @@ rl (readline) is an interactive line-editor.
 const UsageLine = `
 rl
 Usage:
-  rl [-i|--input-only] [--danger-zone] <cmd>
+  rl [-i|--input-only] [--danger-zone] <cmd> [<env_vars>...]
   rl (-r|--rerun) [--danger-zone]
   rl (-h|--help)
 `

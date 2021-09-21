@@ -81,8 +81,14 @@ func StartCommand(tui *TUI) (*exec.Cmd, error) {
 		cmd.Stdin = bytes.NewReader(ctx.stdin.Bytes())
 	}
 
+	varlist := []string{ENVAR_NAME_RL_INPUT + "=" + lineBuffer.content}
+
+	for _, pair := range ctx.envVars {
+		varlist = append(varlist, pair[0]+"="+pair[1])
+	}
+
 	// by default, go will use the current  process's environment. Merge RL_INPUT into that list and provide it to the command
-	cmd.Env = append(ctx.environment, ENVAR_NAME_RL_INPUT+"="+lineBuffer.content)
+	cmd.Env = append(ctx.environment, varlist...)
 
 	var stdoutBuffer bytes.Buffer
 

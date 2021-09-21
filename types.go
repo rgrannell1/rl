@@ -33,6 +33,7 @@ type LineChangeCtx struct {
 	inputOnly   bool                   // should we only return the user's input (e.g lineBuffer) instead of the final command execution, if we're running in execute mode?
 	execute     *string                // a string to execute in a user's shell
 	environment []string               // an array of this processes environmental variables
+	envVars     [][]string             // an array of envar-name mappings to string-values
 	stdin       *ringbuffer.RingBuffer // a buffer containing as much stdin as we are willing to store
 }
 

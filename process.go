@@ -17,16 +17,13 @@ func AwaitCommand(cmd *exec.Cmd, stdoutBuffer *bytes.Buffer, tui *TUI) {
 
 	cmd.Wait()
 
-	count := LineCounter(stdoutBuffer) // TODO this does not work reliably
-	tui.linePosition.lineCount = count
-
+	tui.SetLineCount(stdoutBuffer)
 	tui.UpdateScrollPosition()
 
 	// TODO by default, scroll seems to lock to the bottom of the document. TODO may be annoying
 	// if you scrolled in view mode and tried to apply highlighting / line-number respecting filters.
 	tui.stdoutViewer.tview.ScrollToBeginning()
 	tui.Draw()
-
 }
 
 type ClearWriter struct {

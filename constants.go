@@ -218,3 +218,30 @@ https://github.com/rgrannell1/rl/issues
 	HistoryDocs +
 	EnvironmentalVariables +
 	PleaseBeCareful
+
+const COMMAND_AND_LINE_ROWS = 2
+const STDOUT_ROWS = 0
+const SPACE_ROWS = 1
+const HELP_ROWS = 1
+const COMMAND_ROWS = 1
+
+const ROW_0 = 0
+const ROW_1 = 1
+const ROW_2 = 2
+const ROW_3 = 3
+const ROW_4 = 4
+
+const COL_0 = 0
+const COL_1 = 1
+
+const ROWSPAN_1 = 1
+const COLSPAN_1 = 1
+const COLSPAN_2 = 2
+
+const MINHEIGHT_0 = 0
+
+const MINWIDTH_0 = 0
+const MINWIDTH_1 = 1
+
+const FOCUS = true
+const DONT_FOCUS = false

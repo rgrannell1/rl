@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"strings"
@@ -93,6 +94,17 @@ func (tui *TUI) Draw() {
 	tui.app.tview.Draw()
 }
 
+// Update the line-count based on stdout
+func (tui *TUI) SetLineCount(stdoutBuffer *bytes.Buffer) {
+	count := LineCounter(stdoutBuffer) // TODO this does not work reliably
+	tui.linePosition.lineCount = count
+
+	// clear if empty
+	if tui.linePosition.lineCount == 0 {
+		tui.stdoutViewer.tview.SetText("")
+	}
+}
+
 func (tui *TUI) GetDone() bool {
 	return tui.state.lineBuffer.done
 }
@@ -133,18 +145,15 @@ func (tui *TUI) Stop() {
 // (p tview.Primitive, row int, column int, rowSpan int, colSpan int, minGridHeight int, minGridWidth int, focus bool) *tview.Grid
 func (tui *TUI) Grid() *tview.Grid {
 	return tview.NewGrid().
-		SetRows(2, 0, 1, 1, 1).
-		SetColumns(30, 0, 30, 30).SetBorders(false).
-		// row zero
-		AddItem(tui.commandPreview.tview, 0, 0, 1, 2, 0, 0, false).
-		AddItem(tui.linePosition.tview, 0, 2, 1, 1, 0, 0, false).
-		// row one+
-		AddItem(tui.stdoutViewer.tview, 1, 0, 1, 3, 0, 0, false).
-		AddItem(tview.NewTextView(), 2, 0, 1, 3, 1, 0, false).
-		// row three
-		AddItem(tui.helpBar.tview, 3, 0, 1, 3, 1, 0, false).
-		// row four
-		AddItem(tui.commandInput.tview, 4, 0, 1, 3, 1, 0, true)
+		SetRows(COMMAND_AND_LINE_ROWS, STDOUT_ROWS, SPACE_ROWS, HELP_ROWS, COMMAND_ROWS).
+		SetColumns(-7, -3).SetBorders(false).
+		// add each item in a grid
+		AddItem(tui.commandPreview.tview, ROW_0, COL_0, ROWSPAN_1, COLSPAN_1, MINWIDTH_0, MINHEIGHT_0, DONT_FOCUS).
+		AddItem(tui.linePosition.tview, ROW_0, COL_1, ROWSPAN_1, COLSPAN_1, MINWIDTH_0, MINHEIGHT_0, DONT_FOCUS).
+		AddItem(tui.stdoutViewer.tview, ROW_1, COL_0, ROWSPAN_1, COLSPAN_2, MINWIDTH_0, MINHEIGHT_0, DONT_FOCUS).
+		AddItem(tview.NewTextView(), ROW_2, COL_0, ROWSPAN_1, COLSPAN_2, MINWIDTH_1, MINHEIGHT_0, DONT_FOCUS).
+		AddItem(tui.helpBar.tview, ROW_3, COL_0, ROWSPAN_1, COLSPAN_2, MINWIDTH_1, MINHEIGHT_0, DONT_FOCUS).
+		AddItem(tui.commandInput.tview, ROW_4, COL_0, ROWSPAN_1, COLSPAN_2, MINWIDTH_0, MINHEIGHT_0, FOCUS)
 }
 
 // Start RL's TUI, and handle failures
@@ -264,7 +273,7 @@ func NewLinePosition() *TUILinePosition {
 }
 
 // Create RL tview application
-func NewRLApp() *TUIApp {
+func NewRLApp(tui *TUI) *TUIApp {
 	// -- declare Tview application --
 	app := tview.NewApplication()
 	// -- we actually want to do the opposite; this prevents mousewheel scroll from breaking things.
@@ -278,6 +287,11 @@ func NewRLApp() *TUIApp {
 		// Ctrl + P is intercepted by VSCode; Ctrl + O is the next best thing
 		if event.Key() == tcell.KeyCtrlO {
 			// TODO
+		}
+		if event.Key() == tcell.KeyCtrlC {
+			tui.Stop()
+			tui.chans.exitCode <- 0
+			return nil
 		}
 		return event
 	})
@@ -300,6 +314,10 @@ func NewTextViewer(tui *TUI) *TUITextViewer {
 		case '/':
 			tui.SetMode(CommandMode)
 			return nil
+		case 'g', 'G':
+			// TODO broken
+			tui.UpdateScrollPosition()
+			return event
 		}
 
 		switch event.Key() {
@@ -424,7 +442,7 @@ func NewUI(state LineChangeState, cfg *ConfigOpts, ctx *LineChangeCtx, histChan 
 	tui.chans.history = histChan
 	tui.chans.exitCode = make(chan int, 100)
 
-	tui.app = NewRLApp()
+	tui.app = NewRLApp(&tui)
 	tui.commandPreview = NewCommandPreview(execute)
 	tui.linePosition = NewLinePosition()
 	tui.stdoutViewer = NewTextViewer(&tui)

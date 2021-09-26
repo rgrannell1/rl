@@ -212,10 +212,10 @@ func (tui *TUI) SetMode(mode PromptMode) {
 	currMode := tui.mode
 	tui.mode = mode
 
-	if mode == CommandMode {
-		// CommandMode switches
-		tui.helpBar.tview.SetText(HELP_CMD)
-		tui.commandInput.tview.SetLabel(PROMPT_CMD)
+	if mode == EditMode {
+		// EditMode switches
+		tui.helpBar.tview.SetText(HELP_EDIT)
+		tui.commandInput.tview.SetLabel(PROMPT_EDIT)
 		tui.SetInputFocus()
 	} else if mode == ViewMode {
 		// Viewmode switches
@@ -241,6 +241,9 @@ func (tui *TUI) SetMode(mode PromptMode) {
 		tui.stdoutViewer.tview.SetText(HelpDocumentation)
 		tui.commandInput.tview.SetLabelColor(tcell.ColorGreen)
 		tui.commandInput.tview.SetLabel(PROMPT_HELP)
+	} else if mode == CommandMode {
+		tui.helpBar.tview.SetText(HELP_COMMAND)
+		tui.commandInput.tview.SetLabel(PROMPT_CMD)
 	}
 }
 
@@ -303,14 +306,18 @@ func NewTextViewer(tui *TUI) *TUITextViewer {
 
 	onInput := func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Rune() {
+		case ':':
+			tui.SetMode(CommandMode)
+			return nil
 		case '?':
 			tui.SetMode(HelpMode)
 			return nil
 		case '/':
-			tui.SetMode(CommandMode)
+			tui.SetMode(EditMode)
 			return nil
 		case 'g', 'G':
-			// TODO broken
+			// TODO broken and dumb.
+
 			tui.UpdateScrollPosition()
 			return event
 		}
@@ -406,7 +413,7 @@ func NewCommandInput(tui *TUI) *TUICommandInput {
 	commandInput.
 		SetLabelColor(tcell.ColorRed).
 		SetChangedFunc(onChange).
-		SetLabel(PROMPT_CMD).
+		SetLabel(PROMPT_EDIT).
 		SetDoneFunc(onDone).
 		Focus(func(self tview.Primitive) {
 			tui.InvertCommandInput()
@@ -418,7 +425,7 @@ func NewCommandInput(tui *TUI) *TUICommandInput {
 func NewHelpBar(tui *TUI) *TUIHelpBar {
 	view := tview.NewTextView().
 		SetDynamicColors(true).
-		SetText(HELP_CMD)
+		SetText(HELP_EDIT)
 
 	return &TUIHelpBar{view}
 }
@@ -427,7 +434,7 @@ func NewUI(state LineChangeState, cfg *ConfigOpts, ctx *LineChangeCtx, histChan 
 	execute := ctx.execute
 
 	tui := TUI{}
-	tui.mode = CommandMode
+	tui.mode = EditMode
 	tui.state = &state
 	tui.cfg = cfg
 	tui.ctx = ctx

@@ -8,18 +8,21 @@ const USER_READ_WRITE_OCTAL = 0600     // User read-write file permissions for a
 type PromptMode int
 
 const (
-	CommandMode PromptMode = iota
+	EditMode PromptMode = iota
+	CommandMode
 	ViewMode
 	HelpMode
 )
 
-const PROMPT_CMD = "command | > " // The RL prompt for viewing text
-const PROMPT_VIEW = "view    | "  // The RL prompt for executing a command
-const PROMPT_HELP = "help    | "  // The RL prompt for showing help
+const PROMPT_EDIT = "edit    | > " // The RL prompt for viewing text
+const PROMPT_VIEW = "view    |   " // The RL prompt for executing a command
+const PROMPT_HELP = "help    |   " // The RL prompt for showing help
+const PROMPT_CMD = "command | > "  // The RL prompt for running internal commands
 
-const HELP_CMD = "press [green]ESCAPE[-:-:-] to switch to view mode, [green]ENTER[-:-:-] to exit with command-output"
-const HELP_VIEW = "press [green]ESCAPE[-:-:-] or  [green]q[-:-:-] to quit, [green]/[-:-:-] to switch to edit input, [green]?[-:-:-] for help"
-const HELP_HELP = "press [green]ESCAPE[-:-:-] or  [green]q[-:-:-] to quit, [green]/[-:-:-] to switch to edit input"
+const HELP_COMMAND = "press [green]ESCAPE[-:-:-] or  [green]q[-:-:-] to quit, [green]/[-:-:-] to switch to edit input, [green]:[-:-:-] to enter commands, [green]?[-:-:-] for help"
+const HELP_EDIT = "press [green]ESCAPE[-:-:-] to switch to view mode, [green]ENTER[-:-:-] to exit with command-output"
+const HELP_VIEW = "press [green]ESCAPE[-:-:-] or  [green]q[-:-:-] to quit, [green]/[-:-:-] to switch to edit input, [green]:[-:-:-] to enter commands, [green]?[-:-:-] for help"
+const HELP_HELP = "press [green]ESCAPE[-:-:-] or  [green]q[-:-:-] to quit, [green]/[-:-:-] to switch to edit input, [green]:[-:-:-] to enter commands"
 
 const DefaultViewerText = `
 RL - run commands on key-stroke
@@ -32,9 +35,9 @@ Please read RL's "Please Be Careful" documentation
 `
 
 const ModesDocumentation = `
-RL supports several "modes": command-mode, view-mode, and help-mode.
+RL supports several "modes": edit-mode, command-mode, view-mode, and help-mode.
 
-Command-Mode
+Edit-Mode
 =============
 
   Run commands on key-stroke. Takes the command you provided as an argument, and substitutes
@@ -59,6 +62,11 @@ Command-Mode
   - End, Ctrl-E, Alt-E       end-of-line
   - Ctrl-Left, Ctrl-Right    move one word left, right
 
+Command-Mode
+=============
+
+  Modifies RL's behaviour through commands.
+
 View-Mode
 =========
 
@@ -67,7 +75,8 @@ View-Mode
   top left corner of rl
 
   - Escape, q    quit without output
-  - /            switch to command-mode
+  - /            switch to edit-mode
+  - :            switch to command-mode
   - ?            switch to help-mode
 
   Text Navigation

@@ -46,7 +46,7 @@ func (tui *TUI) UpdateScrollPosition() {
 	tui.linePosition.height = height
 	lineCount := tui.linePosition.lineCount
 
-	endRow := row + height - 1
+	endRow := math.Min(float64(row+height-1), float64(lineCount))
 
 	rowStr := fmt.Sprint(row + 1)         // lines are normally one-indexed
 	endRowStr := fmt.Sprint(endRow)       // the last line shown in the buffer
@@ -57,15 +57,7 @@ func (tui *TUI) UpdateScrollPosition() {
 	if lineCount == 0 {
 		percentStr = ""
 	} else {
-		ratio := float64(endRow) / float64(lineCount)
-
-		if ratio < 0 {
-			ratio = 0
-		}
-
-		if ratio > 100 {
-			ratio = 100
-		}
+		ratio := math.Min(math.Max(0, float64(endRow)/float64(lineCount)), 1)
 
 		percentStr = fmt.Sprint(math.Round(1_000.0*ratio)/10.0) + "%"
 	}

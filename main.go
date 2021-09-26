@@ -13,5 +13,7 @@ func main() {
 		panic(err)
 	}
 
-	os.Exit(RL(opts))
+	code := RL(opts)
+
+	os.Exit(code)
 }

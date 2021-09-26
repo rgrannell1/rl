@@ -13,13 +13,13 @@ const (
 	HelpMode
 )
 
-const PROMPT_CMD = "Command | > " // The RL prompt for viewing text
-const PROMPT_VIEW = "View    | "  // The RL prompt for executing a command
-const PROMPT_HELP = "Help    | "  // The RL prompt for showing help
+const PROMPT_CMD = "command | > " // The RL prompt for viewing text
+const PROMPT_VIEW = "view    | "  // The RL prompt for executing a command
+const PROMPT_HELP = "help    | "  // The RL prompt for showing help
 
-const HELP_CMD = "Press [green]ESCAPE[-:-:-] to switch to view mode, [green]ENTER[-:-:-] to exit with command-output"
-const HELP_VIEW = "Press [green]ESCAPE[-:-:-] or  [green]q[-:-:-] to quit, [green]/[-:-:-] to switch to edit input, [green]?[-:-:-] for help"
-const HELP_HELP = "Press [green]ESCAPE[-:-:-] or  [green]q[-:-:-] to quit, [green]/[-:-:-] to switch to edit input"
+const HELP_CMD = "press [green]ESCAPE[-:-:-] to switch to view mode, [green]ENTER[-:-:-] to exit with command-output"
+const HELP_VIEW = "press [green]ESCAPE[-:-:-] or  [green]q[-:-:-] to quit, [green]/[-:-:-] to switch to edit input, [green]?[-:-:-] for help"
+const HELP_HELP = "press [green]ESCAPE[-:-:-] or  [green]q[-:-:-] to quit, [green]/[-:-:-] to switch to edit input"
 
 const DefaultViewerText = `
 RL - run commands on key-stroke
@@ -34,7 +34,8 @@ Please read RL's "Please Be Careful" documentation
 const ModesDocumentation = `
 RL supports several "modes": command-mode, view-mode, and help-mode.
 
-Command-Mode:
+Command-Mode
+=============
 
   Run commands on key-stroke. Takes the command you provided as an argument, and substitutes
   $RL_INPUT with whatever you type in. Output
@@ -58,7 +59,8 @@ Command-Mode:
   - End, Ctrl-E, Alt-E       end-of-line
   - Ctrl-Left, Ctrl-Right    move one word left, right
 
-View-Mode:
+View-Mode
+=========
 
   Scroll through command-output text. This is useful when a command produces a
   lot of output, for example grepping a log-file. Line-position is shown in the
@@ -68,7 +70,8 @@ View-Mode:
   - /            switch to command-mode
   - ?            switch to help-mode
 
-  Text Navigation:
+  Text Navigation
+  =============
 
   - Up, k                 scroll up
   - Down, j               scroll down
@@ -114,13 +117,17 @@ See Also:
 
 const HistoryDocs = `
 History
+=======
+
   ~/.local/share/rl/history    If enabled, RL will save each executed command to a history file
                                in JSON format.
 
 `
 
 const EnvironmentalVariables = `
-Environment Variables:
+Environment Variables
+=====================
+
   $SHELL           rl starts a command in the user's default-shell.
   $RL_INPUT        this variable conwtains the user-input text. Subcommands
   must use this environmental variable to access user-input.
@@ -128,7 +135,9 @@ Environment Variables:
 `
 
 const Configuration = `
-Configuration:
+Configuration
+=============
+
   ~/.config/rl.yaml    RL can be configured in this YAML file. The options are:
 
   save_history    a boolean value. Should command-execution history be saved to a history file?
@@ -137,7 +146,9 @@ Configuration:
 `
 
 const Options = `
-Arguments:
+Arguments
+=========
+
   <env_vars>...                          a list of environmental-variable bindings to provide in addition to $RL_INPUT,
                                            of the form "FOO=BAR". This can make it easier to wrap "rl" in an alias or function
                                            wrapper. For example, you could provide "folder=$1" from a bash-function and the
@@ -160,7 +171,9 @@ Options:
 `
 
 const PleaseBeCareful = `
-Please Be Careful:
+Please Be Careful
+=================
+
   It is easy to accidentally destroy a system using shell normally; for example, 'rm -rf $FOLDER_NAME' will wipe everything
   in your working-directory if $FOLDER_NAME is empty. Normally, you have the safeguard of at least pressing enter before a
   command is run, giving you time to spot dangerous code. Rl runs its command _every keystroke_, so please think carefully
@@ -203,8 +216,6 @@ const Usage = UsageLine +
 	SeeAlso
 
 const HelpDocumentation = `
-RL
-
 Rl is an interactive command-runner
 
 For questions, feature, bug, or documentation tickets use

@@ -70,7 +70,7 @@ func (tui *TUI) UpdateScrollPosition() {
 		percentStr = fmt.Sprint(math.Round(1_000.0*ratio)/10.0) + "%"
 	}
 
-	tui.linePosition.tview.SetText("line " + rowStr + "-" + endRowStr + "/" + lineCountStr + "    [blue]" + percentStr + "[blue]")
+	tui.linePosition.tview.SetText("line " + rowStr + "-" + endRowStr + " / " + lineCountStr + "    [blue]" + percentStr + "[blue]")
 }
 
 // Invert text command-input
@@ -189,7 +189,7 @@ func (prev *TUICommandPreview) UpdateText(command string, buffer *LineBuffer, en
 		summary = strings.ReplaceAll(summary, varName, highlight)
 	}
 
-	prev.tview.SetText("rl: " + summary)
+	prev.tview.SetText("rl: " + "[::r]" + summary + "[-:-:-]")
 }
 
 // A component for the line-position in the stdout viewer
@@ -255,7 +255,8 @@ func (tui *TUI) SetMode(mode PromptMode) {
 // Create the command-preview element; this will show what the user is actually executing
 func NewCommandPreview(execute *string) *TUICommandPreview {
 	part := tview.NewTextView().
-		SetText("rl: " + *execute).SetTextColor(tcell.ColorDefault).
+		SetTextColor(tcell.ColorDefault).
+		SetText("rl: " + "[::r]" + *execute + "[-:-:-]").
 		SetDynamicColors(true)
 
 	return &TUICommandPreview{part}
@@ -305,6 +306,8 @@ func NewTextViewer(tui *TUI) *TUITextViewer {
 		SetDynamicColors(true).
 		SetTextAlign(tview.AlignCenter).
 		SetTextColor(tcell.ColorDefault)
+
+	// TODO add highlight.
 
 	onInput := func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Rune() {

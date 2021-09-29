@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"syscall"
+	"time"
 
 	"github.com/rivo/tview"
 )
@@ -16,7 +17,9 @@ func AwaitCommand(cmd *exec.Cmd, stdoutBuffer *bytes.Buffer, tui *TUI) {
 	// wait performs cleanup tasks; without this a large number of threads pile-up in this process.
 
 	cmd.Wait()
+	diff := time.Now().Sub(tui.state.commandStart)
 
+	tui.UpdateRuntime(diff)
 	tui.SetLineCount(stdoutBuffer)
 	tui.UpdateScrollPosition()
 
@@ -115,6 +118,7 @@ func StartCommand(tui *TUI) (*exec.Cmd, error) {
 	} else {
 		// start the command, but don't wait for the command to complete or error-check that it started
 
+		tui.state.commandStart = time.Now()
 		cmd.Start()
 		go AwaitCommand(cmd, &stdoutBuffer, tui)
 	}

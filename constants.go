@@ -253,10 +253,12 @@ const ROW_4 = 4
 
 const COL_0 = 0
 const COL_1 = 1
+const COL_2 = 2
 
 const ROWSPAN_1 = 1
 const COLSPAN_1 = 1
 const COLSPAN_2 = 2
+const COLSPAN_3 = 3
 
 const MINHEIGHT_0 = 0
 

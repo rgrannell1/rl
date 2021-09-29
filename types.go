@@ -23,8 +23,9 @@ func (buff *LineBuffer) SetDone() *LineBuffer {
 // Store variables that will changes as characters are received from the user
 // and commands are executed.
 type LineChangeState struct {
-	lineBuffer *LineBuffer // a pointer to an array of characters the user has entered into this application, excluding some special characters like backspaces.
-	cmd        *exec.Cmd   // a pointer to the command currently being executed, if rl is running in execute mode
+	lineBuffer   *LineBuffer // a pointer to an array of characters the user has entered into this application, excluding some special characters like backspaces.
+	cmd          *exec.Cmd   // a pointer to the command currently being executed, if rl is running in execute mode
+	commandStart time.Time   // when was the command launched?
 }
 
 // Contextual contantish information like the user's shell, environmental variables, and command-line options

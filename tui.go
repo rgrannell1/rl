@@ -18,6 +18,7 @@ type TUI struct {
 	ctx            *LineChangeCtx
 	app            *TUIApp
 	commandPreview *TUICommandPreview
+	latency        *TUILatencyViewer
 	linePosition   *TUILinePosition
 	stdoutViewer   *TUITextViewer
 	commandInput   *TUICommandInput
@@ -29,6 +30,23 @@ type TUI struct {
 	mode      PromptMode
 	textAlign int
 	history   HistoryCursor
+}
+
+// provide some display of how long slow commands ran for
+func (tui *TUI) UpdateRuntime(diff time.Duration) {
+	ms := diff.Milliseconds()
+	msg := fmt.Sprint(ms) + "ms"
+
+	if ms < 100 {
+		msg = "[green]" + msg + "[-:-:-]"
+	} else if ms < 300 {
+		msg = "[yellow]" + msg + "[-:-:-]"
+	} else {
+		msg = "[red]" + msg + "[-:-:-]"
+	}
+
+	tui.latency.tview.SetText(msg)
+	tui.Draw()
 }
 
 // Update the line-position element based on the current
@@ -138,14 +156,15 @@ func (tui *TUI) Stop() {
 func (tui *TUI) Grid() *tview.Grid {
 	return tview.NewGrid().
 		SetRows(COMMAND_AND_LINE_ROWS, STDOUT_ROWS, SPACE_ROWS, HELP_ROWS, COMMAND_ROWS).
-		SetColumns(-7, -3).SetBorders(false).
+		SetColumns(-14, -6, -1).SetBorders(false).
 		// add each item in a grid
 		AddItem(tui.commandPreview.tview, ROW_0, COL_0, ROWSPAN_1, COLSPAN_1, MINWIDTH_0, MINHEIGHT_0, DONT_FOCUS).
 		AddItem(tui.linePosition.tview, ROW_0, COL_1, ROWSPAN_1, COLSPAN_1, MINWIDTH_0, MINHEIGHT_0, DONT_FOCUS).
-		AddItem(tui.stdoutViewer.tview, ROW_1, COL_0, ROWSPAN_1, COLSPAN_2, MINWIDTH_0, MINHEIGHT_0, DONT_FOCUS).
-		AddItem(tview.NewTextView(), ROW_2, COL_0, ROWSPAN_1, COLSPAN_2, MINWIDTH_1, MINHEIGHT_0, DONT_FOCUS).
-		AddItem(tui.helpBar.tview, ROW_3, COL_0, ROWSPAN_1, COLSPAN_2, MINWIDTH_1, MINHEIGHT_0, DONT_FOCUS).
-		AddItem(tui.commandInput.tview, ROW_4, COL_0, ROWSPAN_1, COLSPAN_2, MINWIDTH_0, MINHEIGHT_0, FOCUS)
+		AddItem(tui.latency.tview, ROW_0, COL_2, ROWSPAN_1, COLSPAN_1, MINWIDTH_0, MINHEIGHT_0, DONT_FOCUS).
+		AddItem(tui.stdoutViewer.tview, ROW_1, COL_0, ROWSPAN_1, COLSPAN_3, MINWIDTH_0, MINHEIGHT_0, DONT_FOCUS).
+		AddItem(tview.NewTextView(), ROW_2, COL_0, ROWSPAN_1, COLSPAN_3, MINWIDTH_1, MINHEIGHT_0, DONT_FOCUS).
+		AddItem(tui.helpBar.tview, ROW_3, COL_0, ROWSPAN_1, COLSPAN_3, MINWIDTH_1, MINHEIGHT_0, DONT_FOCUS).
+		AddItem(tui.commandInput.tview, ROW_4, COL_0, ROWSPAN_1, COLSPAN_3, MINWIDTH_0, MINHEIGHT_0, FOCUS)
 }
 
 // Start RL's TUI, and handle failures
@@ -165,6 +184,10 @@ func (tui *TUI) Start() int {
 
 //  The preview element showing a preview of the command that will be executed
 type TUICommandPreview struct {
+	tview *tview.TextView
+}
+
+type TUILatencyViewer struct {
 	tview *tview.TextView
 }
 
@@ -195,7 +218,8 @@ type TUILinePosition struct {
 
 // A component for the stdout viewer
 type TUITextViewer struct {
-	tview *tview.TextView
+	tview       *tview.TextView
+	withDefault bool
 }
 
 // A component for the RL text-input field
@@ -268,6 +292,15 @@ func NewLinePosition() *TUILinePosition {
 	return &TUILinePosition{part, 0, 0, 1, 0}
 }
 
+func NewLatencyViewer() *TUILatencyViewer {
+	part := tview.NewTextView().
+		SetText("").
+		SetTextColor(tcell.ColorDefault).
+		SetDynamicColors(true)
+
+	return &TUILatencyViewer{part}
+}
+
 // Create RL tview application
 func NewRLApp(tui *TUI) *TUIApp {
 	// -- declare Tview application --
@@ -302,9 +335,11 @@ func NewTextViewer(tui *TUI) *TUITextViewer {
 		SetTextAlign(tview.AlignCenter).
 		SetTextColor(tcell.ColorDefault)
 
-	// TODO add highlight.
-
 	onInput := func(event *tcell.EventKey) *tcell.EventKey {
+		if tui.stdoutViewer.withDefault {
+			// TODO
+		}
+
 		switch event.Rune() {
 		case ':':
 			tui.SetMode(CommandMode)
@@ -347,13 +382,10 @@ func NewTextViewer(tui *TUI) *TUITextViewer {
 
 	part.SetInputCapture(onInput)
 
-	// this breaks things?
-	//part.Focus(func(self tview.Primitive) {
-	//	tui.commandInput.tview.SetBackgroundColor(tcell.ColorDefault)
-	//	tui.commandInput.tview.SetFieldTextColor(tcell.ColorDefault)
-	//})
-
-	return &TUITextViewer{part}
+	return &TUITextViewer{
+		tview:       part,
+		withDefault: true,
+	}
 }
 
 func NewCommandInput(tui *TUI) *TUICommandInput {
@@ -445,6 +477,7 @@ func NewUI(state LineChangeState, cfg *ConfigOpts, ctx *LineChangeCtx, histChan 
 	tui.chans.exitCode = make(chan int, 100)
 
 	tui.app = NewRLApp(&tui)
+	tui.latency = NewLatencyViewer()
 	tui.commandPreview = NewCommandPreview(execute)
 	tui.linePosition = NewLinePosition()
 	tui.stdoutViewer = NewTextViewer(&tui)
